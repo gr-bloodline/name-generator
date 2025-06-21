@@ -26,6 +26,9 @@ const symbols = [
 let currentSymbol = '';
 let baseName = '';
 let isGenerated = false;
+let symbolIndex = 0;
+let clickCount = 0;
+let recentSymbols = [];
 
 function toSmallCaps(input) {
   return input.toLowerCase().split('').map(c =>
@@ -52,17 +55,41 @@ function generateName() {
   updateResult();
   isGenerated = true;
   document.getElementById('actionBtn').innerText = '♻️';
+  
+  // Reset loop tracking when generating new name
+  symbolIndex = 0;
+  clickCount = 0;
+  recentSymbols = [];
 }
 
 function changeSymbolWithAnimation() {
   const symbolSpan = document.querySelector('#result .symbol');
   if (!symbolSpan) return;
+  
   symbolSpan.classList.add('fade-out');
   const newSymbolSpan = symbolSpan.cloneNode(true);
   symbolSpan.parentNode.replaceChild(newSymbolSpan, symbolSpan);
+  
   newSymbolSpan.addEventListener('animationend', () => {
     newSymbolSpan.classList.remove('fade-out');
-    currentSymbol = getRandomSymbol();
+    
+    clickCount++;
+    
+    // After 10 clicks, show a random symbol from recent 10
+    if (clickCount > 10 && clickCount % 10 === 1 && recentSymbols.length >= 10) {
+      currentSymbol = recentSymbols[Math.floor(Math.random() * recentSymbols.length)];
+    } else {
+      // Normal loop behavior
+      currentSymbol = symbols[symbolIndex];
+      symbolIndex = (symbolIndex + 1) % symbols.length;
+      
+      // Keep track of recent symbols (max 10)
+      if (recentSymbols.length >= 10) {
+        recentSymbols.shift();
+      }
+      recentSymbols.push(currentSymbol);
+    }
+    
     newSymbolSpan.textContent = currentSymbol;
     newSymbolSpan.classList.add('fade-in');
     newSymbolSpan.addEventListener('animationend', () => {
@@ -93,6 +120,9 @@ function resetGenerator() {
   isGenerated = false;
   currentSymbol = '';
   baseName = '';
+  symbolIndex = 0;
+  clickCount = 0;
+  recentSymbols = [];
   document.getElementById('result').style.opacity = 0;
   document.getElementById('result').innerHTML = '';
   document.getElementById('actionBtn').innerText = '✨';

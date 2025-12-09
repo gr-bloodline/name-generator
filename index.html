@@ -1,79 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-  
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"
-    />
-    <title>
-      ᴳᴿメʙʟᴏᴏᴅʟɪɴᴇ Name Generator
-    </title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
-    rel="stylesheet" />
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🧬   </text></svg>">
-  </head>
-  
-  <body>
-    <div class="container">
-      <h1>
-        ᴳᴿメʙʟᴏᴏᴅʟɪɴᴇ Name Generator
-      </h1>
-      <div class="input-wrapper">
-        <input type="text" id="nameInput" maxlength="7" placeholder="Enter name (max 7 characters)"
-        aria-label="Name Input" />
-        <span id="charCount">
-          0/7
-        </span>
-        <button class="action-button" id="actionBtn" onclick="handleAction()">
-          ✨
-        </button>
-      </div>
-      <div id="result" aria-live="polite" role="region">
-      </div>
-      <div class="note">
-        Your generated name will include a random symbol. Max 12 characters total.
-      </div>
-      <div class="symbol-box" onclick="copyInvisible()">
-        Invisible Symbol: ㅤ
-      </div>
-      <div class="theme-toggle">
-        <span class="theme-icon" onclick="toggleTheme()">
-          🌓
-        </span>
-      </div>
-      <div class="credit">
-        <span class="credit-label">
-          📎 Powered by
-        </span>
-        <span class="credit-name" id="creditName">
-          ᴳᴿᴮメʟᴏᴠᴇʀღ
-        </span>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>ᴳᴿメʙʟᴏᴏᴅʟɪɴᴇ Name Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🧬   </text></svg>">
+</head>
+<body>
+  <div class="container">
+    <h1>ᴳᴿメʙʟᴏᴏᴅʟɪɴᴇ Name Generator</h1>
+    <div class="input-wrapper">
+      <input type="text" id="nameInput" maxlength="7" placeholder="Enter name (max 7 characters)" aria-label="Name Input" />
+      <span id="charCount">0/7</span>
+      <button class="action-button" id="actionBtn" onclick="handleAction()">✨</button>
     </div>
-    <!-- Popup remains unchanged -->
-    <div id="welcomePopup" class="popup-container" style="display: none;">
-      <div class="popup-content">
-        <button id="closePopup" class="popup-close-btn">
-          ×
-        </button>
-        <div id="popupMessage">
-          <div class="loading-spinner">
-            <div class="spinner">
-            </div>
-            <p id="loadingText">
-              Checking your region...
-            </p>
-          </div>
-        </div>
-        <div class="popup-footer" style="display: none;">
-          <label>
-            <input type="checkbox" id="dontShowAgain">
-            <span id="disableText">
-            </span>
-          </label>
+    <div id="result" aria-live="polite" role="region"></div>
+    <div class="note">Your generated name will include a random symbol. Max 12 characters total.</div>
+    <div class="symbol-box" onclick="copyInvisible()">Invisible Symbol: ㅤ</div>
+    <div class="copied-message" id="copiedMessage">Copied!</div>
+    <div class="theme-toggle">
+      <span class="theme-icon" onclick="toggleTheme()">🌓</span>
+    </div>
+    <div class="credit">
+      <span class="credit-label">📎 Powered by</span>
+      <!-- Added id="creditName" here -->
+      <span class="credit-name" id="creditName">ᴳᴿᴮメʟᴏᴠᴇʀღ</span>
+    </div>
+  </div>
+
+  <!-- Fully Transparent Popup with Hole Vanish Effect -->
+  <div id="welcomePopup" class="popup-container" style="display: none;">
+    <div class="popup-content">
+      <button id="closePopup" class="popup-close-btn">×</button>
+      <div id="popupMessage">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <p id="loadingText">Checking your region...</p>
         </div>
       </div>
+      <div class="popup-footer" style="display: none;">
+        <label>
+          <input type="checkbox" id="dontShowAgain"> 
+          <span id="disableText"></span>
+        </label>
+      </div>
     </div>
-    <script src="js/script.js">
-      < /script/
+  </div>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

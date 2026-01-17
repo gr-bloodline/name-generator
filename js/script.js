@@ -56,6 +56,10 @@ function generateName() {
   isGenerated = true;
   document.getElementById('actionBtn').innerText = '♻️';
   
+  // Remove focus effect after generation
+  const inputWrapper = document.querySelector('.input-wrapper');
+  inputWrapper.classList.add('generated');
+  
   // Reset loop tracking when generating new name
   symbolIndex = 0;
   clickCount = 0;
@@ -100,7 +104,7 @@ function changeSymbolWithAnimation() {
 
 function updateResult() {
   const resultEl = document.getElementById('result');
-  resultEl.style.opacity = 1;
+  resultEl.classList.add('visible');
   resultEl.innerHTML = '';
   const baseSpan = document.createElement('span');
   baseSpan.className = 'base-name';
@@ -123,17 +127,51 @@ function resetGenerator() {
   symbolIndex = 0;
   clickCount = 0;
   recentSymbols = [];
-  document.getElementById('result').style.opacity = 0;
-  document.getElementById('result').innerHTML = '';
+  
+  // Hide result without leaving space
+  const resultEl = document.getElementById('result');
+  resultEl.classList.remove('visible');
+  resultEl.innerHTML = '';
+  
+  // Reset button to ✨
   document.getElementById('actionBtn').innerText = '✨';
+  
+  // Remove generated class to restore focus effect
+  const inputWrapper = document.querySelector('.input-wrapper');
+  inputWrapper.classList.remove('generated');
+  
+  // Clear input field
+  document.getElementById('nameInput').value = '';
+  document.getElementById('charCount').textContent = '0/7';
 }
 
 document.getElementById('nameInput').addEventListener('input', () => {
   const input = document.getElementById('nameInput');
   const charCount = document.getElementById('charCount');
   charCount.textContent = `${input.value.length}/7`;
-  if (isGenerated) {
+  
+  if (isGenerated && input.value === '') {
+    // Only reset if input is completely cleared
     resetGenerator();
+  } else if (isGenerated && input.value.length > 0) {
+    // If input changes but still has content, keep button as ♻️
+    // This allows editing without losing the generated state
+    isGenerated = false;
+    currentSymbol = '';
+    baseName = '';
+    symbolIndex = 0;
+    clickCount = 0;
+    recentSymbols = [];
+    
+    const resultEl = document.getElementById('result');
+    resultEl.classList.remove('visible');
+    resultEl.innerHTML = '';
+    
+    document.getElementById('actionBtn').innerText = '✨';
+    
+    // Remove generated class
+    const inputWrapper = document.querySelector('.input-wrapper');
+    inputWrapper.classList.remove('generated');
   }
 });
 
@@ -284,6 +322,6 @@ creditName.addEventListener('click', () => {
     creditName.classList.add('clicked');
     setTimeout(() => {
       creditName.classList.remove('clicked');
-    }, 300); // effect lasts 0.3s
+    }, 300);
   });
 });

@@ -36,5 +36,5 @@ Ask leaders/Officers for name approvals
 
 ---
 
-**© 2025 ᴳᴿメʙʟᴏᴏᴅʟɪɴᴇ | All Rights Reserved**  
+**© 2026 ᴳᴿメʙʟᴏᴏᴅʟɪɴᴇ | All Rights Reserved**  
 *"Blood makes us related — Loyalty makes us family."*

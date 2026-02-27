@@ -1,3 +1,4 @@
+// Small caps mapping
 const smallCapsMap = {
   a: 'ᴀ', b: 'ʙ', c: 'ᴄ', d: 'ᴅ', e: 'ᴇ', f: 'ꜰ',
   g: 'ɢ', h: 'ʜ', i: 'ɪ', j: 'ᴊ', k: 'ᴋ', l: 'ʟ',
@@ -8,6 +9,7 @@ const smallCapsMap = {
   6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹'
 };
 
+// Full symbols array
 const symbols = [
   '༒','☬','☆','★','❀','™','→','✿','§','۝','❖','⁂','©','‱','☞','☟','☜',
   '♬','♫','♪','ღ','†','‡','‿','╭','╯','╮','╰','₰','ヅ','ノ','ミ','ン','｠','｟',
@@ -21,7 +23,14 @@ const symbols = [
   '◊','◉','○','●','◌','◎','◇','◆','◈','◍','◐','◑','◒','◓','◔','◕','◖','◗',
   '◞','◟','◠','◡','◢','◣','◤','◥','◦',
   '⬱','⬰','⬸','⬹','⬺','⬻',
-  '⌖','⌘','⌗','⌙','⌠','⌡','⌫','⌬','⌭','⌮','⌯','⌰'];
+  '⌖','⌘','⌗','⌙','⌠','⌡','⌫','⌬','⌭','⌮','⌯','⌰'
+];
+
+// Special symbols for FIRST generation and DOUBLE CLICK
+const firstGenSymbols = [
+  '❖', '〆', '々', '⟡', '⟠', '⌭', '⌮', '⌰', '☃', '☂', 
+  '☁', '☼', '⁂', 'ヅ', 'ミ', '¤', '♡', '⚖', '៚', '⌫', '⌘'
+];
 
 let currentSymbol = '';
 let baseName = '';
@@ -30,18 +39,82 @@ let symbolIndex = 0;
 let clickCount = 0;
 let recentSymbols = [];
 
+// Rapid click detection variables
+let clickTimer = null;
+let rapidClickCount = 0;
+const RAPID_CLICK_DELAY = 300;
+const RAPID_CLICK_THRESHOLD = 3;
+
+// Track current animation to prevent conflicts
+let currentAnimation = null;
+
 function toSmallCaps(input) {
   return input.toLowerCase().split('').map(c =>
     c === ' ' ? 'ㅤ' : smallCapsMap[c] || ''
   ).join('');
 }
 
-function handleAction() {
+function handleAction(event) {
   if (!isGenerated) {
     generateName();
-  } else {
-    changeSymbolWithAnimation();
+    return;
   }
+
+  // DOUBLE CLICK
+  if (event && event.detail === 2) {
+    currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
+    applySymbolAnimation('double');
+    return;
+  }
+
+  // For single clicks, handle rapid click detection
+  rapidClickCount++;
+  
+  if (clickTimer) {
+    clearTimeout(clickTimer);
+  }
+  
+  clickTimer = setTimeout(() => {
+    if (rapidClickCount >= RAPID_CLICK_THRESHOLD) {
+      // RAPID CLICKS
+      for (let i = 0; i < rapidClickCount; i++) {
+        symbolIndex = (symbolIndex + 1) % symbols.length;
+      }
+      currentSymbol = symbols[symbolIndex];
+      applySymbolAnimation('rapid');
+    } else {
+      // SINGLE CLICK
+      handleSingleClick();
+    }
+    
+    rapidClickCount = 0;
+  }, RAPID_CLICK_DELAY);
+}
+
+function handleSingleClick() {
+  clickCount++;
+  
+  // 🎲 LUCKY CLICK: Every 5th click
+  if (clickCount % 5 === 0) {
+    currentSymbol = symbols[Math.floor(Math.random() * symbols.length)];
+  }
+  // Recent random: After 10 clicks, every 10th click
+  else if (clickCount > 10 && clickCount % 10 === 1 && recentSymbols.length >= 10) {
+    currentSymbol = recentSymbols[Math.floor(Math.random() * recentSymbols.length)];
+  } else {
+    // Normal sequential
+    currentSymbol = symbols[symbolIndex];
+    symbolIndex = (symbolIndex + 1) % symbols.length;
+  }
+  
+  // Track recent symbols
+  if (recentSymbols.length >= 10) {
+    recentSymbols.shift();
+  }
+  recentSymbols.push(currentSymbol);
+  
+  // Apply SINGLE CLICK animation
+  applySymbolAnimation('single');
 }
 
 function generateName() {
@@ -51,55 +124,65 @@ function generateName() {
     return;
   }
   baseName = `ᴳᴿᴮメ${toSmallCaps(input)}`;
-  currentSymbol = getRandomSymbol();
+  
+  currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
+  
   updateResult();
   isGenerated = true;
   document.getElementById('actionBtn').innerText = '♻️';
   
-  // Remove focus effect after generation
   const inputWrapper = document.querySelector('.input-wrapper');
   inputWrapper.classList.add('generated');
   
-  // Reset loop tracking when generating new name
   symbolIndex = 0;
   clickCount = 0;
   recentSymbols = [];
+  recentSymbols.push(currentSymbol);
 }
 
-function changeSymbolWithAnimation() {
+function handleScroll(direction) {
+  if (direction === 'down') {
+    symbolIndex = (symbolIndex + 1) % symbols.length;
+    currentSymbol = symbols[symbolIndex];
+    applySymbolAnimation('scrollDown');
+  } else if (direction === 'up') {
+    symbolIndex = (symbolIndex - 1 + symbols.length) % symbols.length;
+    currentSymbol = symbols[symbolIndex];
+    applySymbolAnimation('scrollUp');
+  }
+}
+
+function applySymbolAnimation(animationType) {
   const symbolSpan = document.querySelector('#result .symbol');
   if (!symbolSpan) return;
   
-  symbolSpan.classList.add('fade-out');
-  const newSymbolSpan = symbolSpan.cloneNode(true);
-  symbolSpan.parentNode.replaceChild(newSymbolSpan, symbolSpan);
+  if (currentAnimation) {
+    symbolSpan.classList.remove(currentAnimation);
+  }
   
-  newSymbolSpan.addEventListener('animationend', () => {
-    newSymbolSpan.classList.remove('fade-out');
+  symbolSpan.textContent = currentSymbol;
+  
+  void symbolSpan.offsetWidth;
+  
+  const animationClass = {
+    'single': 'click-animation',
+    'scrollDown': 'scroll-down-animation',
+    'scrollUp': 'scroll-up-animation',
+    'double': 'double-click-animation',
+    'rapid': 'rapid-click-animation'
+  }[animationType];
+  
+  if (animationClass) {
+    symbolSpan.classList.add(animationClass);
+    currentAnimation = animationClass;
     
-    clickCount++;
-    
-    // After 10 clicks, show a random symbol from recent 10
-    if (clickCount > 10 && clickCount % 10 === 1 && recentSymbols.length >= 10) {
-      currentSymbol = recentSymbols[Math.floor(Math.random() * recentSymbols.length)];
-    } else {
-      // Normal loop behavior
-      currentSymbol = symbols[symbolIndex];
-      symbolIndex = (symbolIndex + 1) % symbols.length;
-      
-      // Keep track of recent symbols (max 10)
-      if (recentSymbols.length >= 10) {
-        recentSymbols.shift();
+    setTimeout(() => {
+      symbolSpan.classList.remove(animationClass);
+      if (currentAnimation === animationClass) {
+        currentAnimation = null;
       }
-      recentSymbols.push(currentSymbol);
-    }
-    
-    newSymbolSpan.textContent = currentSymbol;
-    newSymbolSpan.classList.add('fade-in');
-    newSymbolSpan.addEventListener('animationend', () => {
-      newSymbolSpan.classList.remove('fade-in');
-    }, { once: true });
-  }, { once: true });
+    }, 500);
+  }
 }
 
 function updateResult() {
@@ -116,10 +199,6 @@ function updateResult() {
   resultEl.appendChild(symbolSpan);
 }
 
-function getRandomSymbol() {
-  return symbols[Math.floor(Math.random() * symbols.length)];
-}
-
 function resetGenerator() {
   isGenerated = false;
   currentSymbol = '';
@@ -128,34 +207,33 @@ function resetGenerator() {
   clickCount = 0;
   recentSymbols = [];
   
-  // Hide result without leaving space
+  if (clickTimer) {
+    clearTimeout(clickTimer);
+    rapidClickCount = 0;
+  }
+  
   const resultEl = document.getElementById('result');
   resultEl.classList.remove('visible');
   resultEl.innerHTML = '';
   
-  // Reset button to ✨
   document.getElementById('actionBtn').innerText = '✨';
   
-  // Remove generated class to restore focus effect
   const inputWrapper = document.querySelector('.input-wrapper');
   inputWrapper.classList.remove('generated');
   
-  // Clear input field
   document.getElementById('nameInput').value = '';
   document.getElementById('charCount').textContent = '0/7';
 }
 
+// Event Listeners
 document.getElementById('nameInput').addEventListener('input', () => {
   const input = document.getElementById('nameInput');
   const charCount = document.getElementById('charCount');
   charCount.textContent = `${input.value.length}/7`;
   
   if (isGenerated && input.value === '') {
-    // Only reset if input is completely cleared
     resetGenerator();
   } else if (isGenerated && input.value.length > 0) {
-    // If input changes but still has content, keep button as ♻️
-    // This allows editing without losing the generated state
     isGenerated = false;
     currentSymbol = '';
     baseName = '';
@@ -169,7 +247,6 @@ document.getElementById('nameInput').addEventListener('input', () => {
     
     document.getElementById('actionBtn').innerText = '✨';
     
-    // Remove generated class
     const inputWrapper = document.querySelector('.input-wrapper');
     inputWrapper.classList.remove('generated');
   }
@@ -245,7 +322,29 @@ inputField.addEventListener('beforeinput', (e) => {
   }
 });
 
-// Enhanced Popup Functionality
+// Scroll wheel functionality
+const actionBtn = document.getElementById('actionBtn');
+
+actionBtn.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  
+  if (!isGenerated) {
+    return;
+  }
+  
+  if (clickTimer) {
+    clearTimeout(clickTimer);
+    rapidClickCount = 0;
+  }
+  
+  if (e.deltaY < 0) {
+    handleScroll('up');
+  } else {
+    handleScroll('down');
+  }
+});
+
+// Popup Functionality
 async function showLocalizedPopup() {
   const popupDismissed = localStorage.getItem('popupDismissed');
   const now = new Date().getTime();
@@ -280,10 +379,10 @@ function showPopupContent(isBangladesh) {
   };
 
   document.getElementById('popupMessage').innerHTML = `
-    <h3 style="margin-bottom: 1rem; color: #ff4d4d; font-size: 1.4rem; text-shadow: 0 0 10px rgba(255, 0, 0, 0.5), 0 0 20px rgba(255, 77, 77, 0.3);">
+    <h3 style="margin-bottom: 1rem; color: #ff4d4d; font-size: 1.4rem;">
       ${messages.title}
     </h3>
-    <p style="line-height: 1.6; margin-bottom: 1.5rem; font-size: 1.1rem; color: white; text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);">
+    <p style="line-height: 1.6; margin-bottom: 1.5rem; font-size: 1.1rem;">
       ${messages.content}
     </p>
   `;
@@ -314,7 +413,7 @@ document.getElementById('closePopup').addEventListener('click', function(e) {
 
 document.addEventListener('DOMContentLoaded', showLocalizedPopup);
 
-// --- Custom Credit Copy Override ---
+// Credit click
 const creditName = document.getElementById('creditName');
 
 creditName.addEventListener('click', () => {

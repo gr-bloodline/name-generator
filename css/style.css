@@ -6,6 +6,7 @@
   --input-bg: #ffffff;
   --input-border: #e0e0e0;
   --popup-text-light: #111;
+  --gold-color: #ffd700;
 }
 
 [data-theme='dark'] {
@@ -16,6 +17,7 @@
   --input-bg: #2b2b2b;
   --input-border: #444;
   --popup-text-light: #e2e2e2;
+  --gold-color: #ffd700;
 }
 
 * {
@@ -83,8 +85,8 @@ h1 {
 
 /* Soft blue focus effect that disappears after generation */
 .input-wrapper:focus-within:not(.generated) {
-  border-color: rgba(16, 163, 127, 0.3); /* Soft blue-green */
-  box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.1); /* Very subtle glow */
+  border-color: rgba(16, 163, 127, 0.3);
+  box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.1);
 }
 
 .input-wrapper input {
@@ -144,7 +146,6 @@ h1 {
   user-select: none;
   height: 100%;
   flex-shrink: 0;
-  /* Shift the icon slightly left */
   transform: translateX(-0.1rem);
 }
 
@@ -180,6 +181,86 @@ h1 {
 
 #result .base-name, #result .symbol {
   user-select: none;
+}
+
+/* Animation effects for symbols */
+.symbol {
+  display: inline-block;
+  will-change: transform, opacity, color;
+}
+
+/* SINGLE CLICK Animation - Smooth Rotate (Your Choice) */
+.symbol.click-animation {
+  animation: smoothRotate 0.4s ease-out;
+}
+
+@keyframes smoothRotate {
+  0% { 
+    transform: rotate(0deg) scale(1); 
+  }
+  50% { 
+    transform: rotate(8deg) scale(1.1); 
+    color: var(--accent-color);
+  }
+  100% { 
+    transform: rotate(0deg) scale(1); 
+    color: var(--accent-color);
+  }
+}
+
+/* SCROLL DOWN Animation - Smooth slide from top */
+.symbol.scroll-down-animation {
+  animation: smoothSlideDown 0.25s ease-out;
+}
+
+@keyframes smoothSlideDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* SCROLL UP Animation - Smooth slide from bottom */
+.symbol.scroll-up-animation {
+  animation: smoothSlideUp 0.25s ease-out;
+}
+
+@keyframes smoothSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* DOUBLE CLICK Animation - Gold pulse for premium symbols */
+.symbol.double-click-animation {
+  animation: goldPulse 0.4s ease-out;
+}
+
+@keyframes goldPulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.2); color: var(--gold-color); }
+  70% { transform: scale(1.05); color: var(--accent-color); }
+  100% { transform: scale(1); color: var(--accent-color); }
+}
+
+/* RAPID CLICK Animation - Quick pulse */
+.symbol.rapid-click-animation {
+  animation: quickPulse 0.2s ease-out;
+}
+
+@keyframes quickPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); color: var(--accent-color); }
+  100% { transform: scale(1); color: var(--accent-color); }
 }
 
 .note {
@@ -253,24 +334,6 @@ h1 {
   display: none;
 }
 
-.fade-out {
-  animation: fadeOut 0.3s forwards;
-}
-
-.fade-in {
-  animation: fadeIn 0.3s forwards;
-}
-
-@keyframes fadeOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-10px); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @media (max-width: 600px) {
   .container {
     margin: 1rem;
@@ -305,6 +368,7 @@ h1 {
   
   .action-button:hover {
     transform: translateX(-0.05rem) scale(1.1);
+    cursor: pointer;
   }
   
   .action-button:active {
@@ -316,7 +380,7 @@ input::placeholder {
   color: #888;
 }
 
-/* Enhanced Popup Styles */
+/* Popup Styles */
 .popup-container {
   position: fixed;
   top: 0;
@@ -327,7 +391,6 @@ input::placeholder {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  animation: fadeIn 0.4s ease-out;
   background-color: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(5px);
 }
@@ -355,7 +418,6 @@ input::placeholder {
   text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
 }
 
-/* Enhanced visibility for light mode */
 :root:not([data-theme='dark']) .popup-content h3 {
   color: #ff4d4d !important;
   text-shadow: 0 0 10px rgba(255, 0, 0, 0.5), 
@@ -371,11 +433,6 @@ input::placeholder {
   color: #f0f0f0 !important;
 }
 
-:root:not([data-theme='dark']) #disableText {
-  color: #ff9999 !important;
-  text-shadow: 0 0 5px rgba(255, 0, 0, 0.4);
-}
-
 .popup-close-btn {
   position: absolute;
   top: 0.5rem;
@@ -386,19 +443,12 @@ input::placeholder {
   cursor: pointer;
   color: var(--accent-color);
   padding: 0.5rem;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.3s ease;
   transform-origin: center;
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
 }
 
 .popup-close-btn:hover {
   transform: scale(1.2) rotate(90deg);
-  opacity: 0.9;
-}
-
-.popup-close-btn:active {
-  transform: scale(0.9) rotate(90deg);
 }
 
 .popup-footer {
@@ -414,10 +464,7 @@ input::placeholder {
   gap: 0.8rem;
   margin-bottom: 1rem;
   cursor: pointer;
-  user-select: none;
-  font-size: 0.9rem;
   color: white;
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
 }
 
 #dontShowAgain {
@@ -441,15 +488,12 @@ input::placeholder {
   border-top-color: var(--accent-color);
   animation: spin 1s linear infinite;
   margin-bottom: 1.5rem;
-  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.5));
 }
 
 #loadingText {
   color: white;
   margin-top: 0.5rem;
   text-align: center;
-  font-size: 0.95rem;
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.7);
 }
 
 @keyframes spin {
@@ -462,20 +506,16 @@ input::placeholder {
 }
 
 @keyframes shake {
-  0% { transform: translateX(0); }
+  0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-4px); }
-  50% { transform: translateX(4px); }
-  75% { transform: translateX(-4px); }
-  100% { transform: translateX(0); }
+  75% { transform: translateX(4px); }
 }
 
-/* Prevent copying the heading */
 h1 {
   user-select: none;
   pointer-events: none;
 }
 
-/* Credit click effect */
 .credit-name {
   cursor: pointer;
   transition: color 0.3s ease, transform 0.2s ease;

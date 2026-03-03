@@ -13,6 +13,7 @@
 - One-click copy functionality
 - Premium symbol list for first generation
 - Multiple interaction methods for symbol cycling
+- Full keyboard shortcut support
 
 ## 🎮 How to Use
 
@@ -32,10 +33,25 @@
 | **Scroll Down** (on ♻️) | Next symbol | Slide Down |
 | **Rapid Clicks** (3+ fast) | Moves multiple steps forward | Quick Pulse |
 
+### ⌨️ Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| **Enter** | Generate name (when input focused) / Cycle symbol (after generation) |
+| **Space** | Focus the input box |
+| **Esc** | Reset everything and remove focus |
+| **Ctrl/Cmd + D** | Toggle dark/light theme |
+| **Ctrl + C** | Copy generated name |
+| **↑ / ←** | Previous symbol |
+| **↓ / →** | Next symbol |
+| **1 - 9** (single press) | Jump to specific symbol position |
+| **1 - 9** (double press) | Move forward by that many symbols |
+
 ### 🎲 Special Features
 - **Lucky Click**: Every 5th single click gives a completely random symbol from entire collection
 - **Recent Random**: After 10 clicks, every 10th click picks from last 10 symbols used
 - **Premium First Gen**: First generation always uses special symbol list
+- **Number Key Shortcuts**: Single press jumps to symbol, double press advances multiple steps
 
 ### 💎 Premium First Generation Symbols
 ❖ 〆 々 ⟡ ⟠ ⌭ ⌮ ⌰ ☃ ☂ ☁ ☼ ⁂ ヅ ミ ¤ ♡ ⚖ ៚ ⌫ ⌘
@@ -51,14 +67,14 @@
 | **♻️** | Scroll Down | Next symbol |
 | **♻️** | 3+ Rapid Clicks | Skip multiple symbols forward |
 
-## 🆕 What's New in v2.0
-- **Smooth Rotate Animation** - Elegant 8° rotation on single clicks
-- **Scroll Wheel Support** - Scroll up/down on button to cycle symbols
-- **Double Click Feature** - Get premium symbols anytime
-- **Rapid Click Detection** - Fast clicks skip multiple symbols
-- **Lucky Click System** - Every 5th click is completely random
-- **Recent Random** - After 10 clicks, random from last 10 used
-- **Premium First Gen** - Special symbol list for first generation
+## 🆕 What's New in v2.1
+- **Full Keyboard Navigation** - Control everything without mouse
+- **Number Key Shortcuts** - 1-9 for quick symbol jumps
+- **Double-Tap Numbers** - Rapid advance by number value
+- **ESC Reset** - Instant clear with focus removal
+- **Ctrl+C Copy** - Quick copy shortcut
+- **Space to Focus** - Quick access to input field
+- **Arrow Key Navigation** - Alternative to scroll wheel
 
 ## 🚨 Important Notes
 1. **ALWAYS** Follow the style guide before changing a name.
@@ -69,13 +85,13 @@
 ## 💻 For Members
 1. Enter your name (1-7 letters)
 2. Click ✨ to generate first name (gets premium symbol)
-3. Use ♻️ button to cycle symbols:
-   - Single click for normal cycling
-   - Double click for another premium symbol
-   - Scroll wheel for quick browsing
-   - Rapid clicks to skip ahead
-4. Click the result to copy
-5. Show to leader/officer for approval
+3. Use ♻️ button or keyboard shortcuts to cycle symbols:
+   - **Arrow keys** to browse
+   - **Number keys** for quick jumps
+   - **Double-tap numbers** to skip ahead
+4. Click the result or press **Ctrl+C** to copy
+5. Press **Esc** to reset and start over
+6. Show to leader/officer for approval
 
 ## ⚠️ Code Policy
 This is **guild-exclusive** software. You may not:

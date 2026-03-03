@@ -45,6 +45,10 @@ let rapidClickCount = 0;
 const RAPID_CLICK_DELAY = 300;
 const RAPID_CLICK_THRESHOLD = 3;
 
+// Number key double-click tracking
+let numberKeyTimers = {};
+let numberKeyPressCount = {};
+
 // Track current animation to prevent conflicts
 let currentAnimation = null;
 
@@ -212,6 +216,13 @@ function resetGenerator() {
     rapidClickCount = 0;
   }
   
+  // Clear all number key timers
+  Object.keys(numberKeyTimers).forEach(key => {
+    clearTimeout(numberKeyTimers[key]);
+  });
+  numberKeyTimers = {};
+  numberKeyPressCount = {};
+  
   const resultEl = document.getElementById('result');
   resultEl.classList.remove('visible');
   resultEl.innerHTML = '';
@@ -223,7 +234,130 @@ function resetGenerator() {
   
   document.getElementById('nameInput').value = '';
   document.getElementById('charCount').textContent = '0/7';
+  
+  // Remove focus from input box
+  document.getElementById('nameInput').blur();
 }
+
+// ==================== KEYBOARD SHORTCUTS ====================
+
+document.addEventListener('keydown', (e) => {
+  const input = document.getElementById('nameInput');
+  const isInputFocused = document.activeElement === input;
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const ctrlCmdPressed = isMac ? e.metaKey : e.ctrlKey;
+
+  // 1. ENTER → Generate name (only if input box is selected)
+  if (e.key === 'Enter' && isInputFocused) {
+    e.preventDefault(); // Prevent form submission if any
+    if (!isGenerated) {
+      generateName();
+    } else {
+      // If already generated, treat as single click to cycle
+      handleAction({ detail: 1 });
+    }
+  }
+
+  // 2. SPACE → For selecting input box (but space works normally when selected)
+  if (e.key === ' ' && !isInputFocused) {
+    e.preventDefault();
+    input.focus();
+  }
+
+  // 3. ESC → Reset/Clear everything and remove focus from input
+  if (e.key === 'Escape') {
+    resetGenerator();
+  }
+
+  // 4. Ctrl/Cmd + D → Toggle dark/light theme
+  if (ctrlCmdPressed && e.key === 'd') {
+    e.preventDefault();
+    toggleTheme();
+  }
+
+  // 5. Ctrl + C → Copy output/result (only if result is visible)
+  if (ctrlCmdPressed && e.key === 'c') {
+    const resultEl = document.getElementById('result');
+    if (isGenerated && resultEl.classList.contains('visible')) {
+      e.preventDefault();
+      const textToCopy = baseName + currentSymbol;
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        showCopiedMessage();
+      });
+    }
+  }
+
+  // 6. Number keys 1-9 → Quick symbol selection with double-click support
+  if (isGenerated && e.key >= '1' && e.key <= '9') {
+    e.preventDefault();
+    const num = parseInt(e.key);
+    
+    // Initialize counter for this number key if not exists
+    if (!numberKeyPressCount[num]) {
+      numberKeyPressCount[num] = 0;
+    }
+    
+    // Clear existing timer for this number
+    if (numberKeyTimers[num]) {
+      clearTimeout(numberKeyTimers[num]);
+    }
+    
+    // Increment press count
+    numberKeyPressCount[num]++;
+    
+    // Set timer to process after delay
+    numberKeyTimers[num] = setTimeout(() => {
+      const pressCount = numberKeyPressCount[num];
+      
+      if (pressCount >= 2) {
+        // DOUBLE CLICK on number key - move forward by that number of symbols
+        for (let i = 0; i < num; i++) {
+          symbolIndex = (symbolIndex + 1) % symbols.length;
+        }
+        currentSymbol = symbols[symbolIndex];
+        applySymbolAnimation('rapid'); // Use rapid animation for multiple jumps
+      } else {
+        // SINGLE CLICK on number key - jump to that specific symbol
+        const targetIndex = num - 1;
+        if (targetIndex < symbols.length) {
+          symbolIndex = targetIndex;
+          currentSymbol = symbols[symbolIndex];
+          applySymbolAnimation('single'); // Use single animation for direct jump
+        }
+      }
+      
+      // Track in recent symbols
+      if (recentSymbols.length >= 10) {
+        recentSymbols.shift();
+      }
+      recentSymbols.push(currentSymbol);
+      
+      // Reset counter for this number
+      numberKeyPressCount[num] = 0;
+      delete numberKeyTimers[num];
+    }, RAPID_CLICK_DELAY); // Use same delay as rapid click detection
+  }
+
+  // 7. Arrow Keys → Navigate through symbols (alternative for scroll)
+  if (isGenerated) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      handleScroll('down');
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      handleScroll('up');
+    }
+  }
+});
+
+// Prevent default arrow key scrolling when generated
+document.addEventListener('keydown', (e) => {
+  if (isGenerated && (e.key.startsWith('Arrow'))) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// ==================== END KEYBOARD SHORTCUTS ====================
 
 // Event Listeners
 document.getElementById('nameInput').addEventListener('input', () => {

@@ -32,6 +32,7 @@
 | **Scroll Up** (on ♻️) | Previous symbol | Slide Up |
 | **Scroll Down** (on ♻️) | Next symbol | Slide Down |
 | **Rapid Clicks** (3+ fast) | Moves multiple steps forward | Quick Pulse |
+| **Long Press** (3 sec hold) | Rapid auto-scroll with acceleration | Spinning Effect |
 
 ### ⌨️ Keyboard Shortcuts
 
@@ -46,12 +47,14 @@
 | **↓ / →** | Next symbol |
 | **1 - 9** (single press) | Jump to specific symbol position |
 | **1 - 9** (double press) | Move forward by that many symbols |
+| **Numpad \*** (hold) | Long press - rapid symbol scrolling |
 
 ### 🎲 Special Features
 - **Lucky Click**: Every 5th single click gives a completely random symbol from entire collection
 - **Recent Random**: After 10 clicks, every 10th click picks from last 10 symbols used
 - **Premium First Gen**: First generation always uses special symbol list
 - **Number Key Shortcuts**: Single press jumps to symbol, double press advances multiple steps
+- **Long Press**: Hold ♻️ button or Numpad * for 3 seconds to rapidly scroll through symbols with speed acceleration
 
 ### 💎 Premium First Generation Symbols
 ❖ 〆 々 ⟡ ⟠ ⌭ ⌮ ⌰ ☃ ☂ ☁ ☼ ⁂ ヅ ミ ¤ ♡ ⚖ ៚ ⌫ ⌘
@@ -66,15 +69,14 @@
 | **♻️** | Scroll Up | Previous symbol |
 | **♻️** | Scroll Down | Next symbol |
 | **♻️** | 3+ Rapid Clicks | Skip multiple symbols forward |
+| **♻️** (hold) / Numpad * (hold) | Long Press (3 sec) | Rapid auto-scroll with acceleration |
 
-## 🆕 What's New in v2.1
-- **Full Keyboard Navigation** - Control everything without mouse
-- **Number Key Shortcuts** - 1-9 for quick symbol jumps
-- **Double-Tap Numbers** - Rapid advance by number value
-- **ESC Reset** - Instant clear with focus removal
-- **Ctrl+C Copy** - Quick copy shortcut
-- **Space to Focus** - Quick access to input field
-- **Arrow Key Navigation** - Alternative to scroll wheel
+## 🆕 What's New in v2.2
+- **Fixed Double-click vs Rapid-click conflict** - Both now work perfectly without interference
+- **Long Press Feature** - Hold ♻️ button or Numpad * for 3 seconds to rapidly scroll through symbols
+- **Speed Acceleration** - Scrolling gets faster the longer you hold
+- **Numpad * Support** - Dedicated key for long press on desktop
+- **Improved Keyboard Handling** - Numpad * never types in input field
 
 ## 🚨 Important Notes
 1. **ALWAYS** Follow the style guide before changing a name.
@@ -89,6 +91,7 @@
    - **Arrow keys** to browse
    - **Number keys** for quick jumps
    - **Double-tap numbers** to skip ahead
+   - **Hold ♻️ button** or **Numpad *** for rapid scrolling
 4. Click the result or press **Ctrl+C** to copy
 5. Press **Esc** to reset and start over
 6. Show to leader/officer for approval

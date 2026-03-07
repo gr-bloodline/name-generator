@@ -1,4 +1,4 @@
-# 🩸 ᴳᴿメʙʟᴏᴏᴅʟɪɴᴇ | Name Generator
+# 🧬 ᴳᴿᴮメʙʟᴏᴏᴅʟɪɴᴇ | Name Generator
 
 ✨ Exclusive tool for guild members to create official ᴳᴿᴮ-style names  
 *"We don't die — We multiply."* 🔥
@@ -14,6 +14,7 @@
 - Premium symbol list for first generation
 - Multiple interaction methods for symbol cycling
 - Full keyboard shortcut support
+- **Long Press Feature** - Hold for rapid auto-scroll with acceleration
 
 ## 🎮 How to Use
 
@@ -32,7 +33,8 @@
 | **Scroll Up** (on ♻️) | Previous symbol | Slide Up |
 | **Scroll Down** (on ♻️) | Next symbol | Slide Down |
 | **Rapid Clicks** (3+ fast) | Moves multiple steps forward | Quick Pulse |
-| **Long Press** (3 sec hold) | Rapid auto-scroll with acceleration | Spinning Effect |
+| **Long Press (3 sec)** on Mobile (♻️) | Rapid auto-scroll with acceleration | Quick Pulse |
+| **Hold Numpad *** on Desktop | Rapid auto-scroll with acceleration | Quick Pulse |
 
 ### ⌨️ Keyboard Shortcuts
 
@@ -47,14 +49,17 @@
 | **↓ / →** | Next symbol |
 | **1 - 9** (single press) | Jump to specific symbol position |
 | **1 - 9** (double press) | Move forward by that many symbols |
-| **Numpad \*** (hold) | Long press - rapid symbol scrolling |
+| **Numpad *** (hold) | Start long press auto-scroll (Desktop only - Numpad only) |
 
 ### 🎲 Special Features
 - **Lucky Click**: Every 5th single click gives a completely random symbol from entire collection
 - **Recent Random**: After 10 clicks, every 10th click picks from last 10 symbols used
 - **Premium First Gen**: First generation always uses special symbol list
 - **Number Key Shortcuts**: Single press jumps to symbol, double press advances multiple steps
-- **Long Press**: Hold ♻️ button or Numpad * for 3 seconds to rapidly scroll through symbols with speed acceleration
+- **Long Press Feature**: 
+  - **Mobile**: Hold ♻️ button for 3 seconds to start rapid auto-scroll
+  - **Desktop**: Hold Numpad * key to start rapid auto-scroll
+- **Speed Acceleration**: Scrolling gets faster the longer you hold (starts at 200ms, accelerates to 50ms)
 
 ### 💎 Premium First Generation Symbols
 ❖ 〆 々 ⟡ ⟠ ⌭ ⌮ ⌰ ☃ ☂ ☁ ☼ ⁂ ヅ ミ ¤ ♡ ⚖ ៚ ⌫ ⌘
@@ -69,14 +74,17 @@
 | **♻️** | Scroll Up | Previous symbol |
 | **♻️** | Scroll Down | Next symbol |
 | **♻️** | 3+ Rapid Clicks | Skip multiple symbols forward |
-| **♻️** (hold) / Numpad * (hold) | Long Press (3 sec) | Rapid auto-scroll with acceleration |
+| **♻️** (hold) on Mobile | Long Press (3 sec) | Rapid auto-scroll with acceleration |
+| **Numpad *** (hold) on Desktop | Long Press | Rapid auto-scroll with acceleration |
 
 ## 🆕 What's New in v2.2
-- **Fixed Double-click vs Rapid-click conflict** - Both now work perfectly without interference
-- **Long Press Feature** - Hold ♻️ button or Numpad * for 3 seconds to rapidly scroll through symbols
+- **Long Press Feature** - Hold for rapid auto-scroll
+  - Mobile: Hold ♻️ button for 3 seconds
+  - Desktop: Hold Numpad * key (only Numpad, regular * types normally)
 - **Speed Acceleration** - Scrolling gets faster the longer you hold
-- **Numpad * Support** - Dedicated key for long press on desktop
-- **Improved Keyboard Handling** - Numpad * never types in input field
+- **Numpad * Support** - Dedicated key for long press on desktop (never types in input)
+- **Arrow Keys** - Normal symbol navigation
+- **Improved Animation** - Smoother transitions during rapid scrolling
 
 ## 🚨 Important Notes
 1. **ALWAYS** Follow the style guide before changing a name.
@@ -91,7 +99,8 @@
    - **Arrow keys** to browse
    - **Number keys** for quick jumps
    - **Double-tap numbers** to skip ahead
-   - **Hold ♻️ button** or **Numpad *** for rapid scrolling
+   - **Hold ♻️ button** on mobile for rapid auto-scroll
+   - **Hold Numpad *** on desktop for rapid auto-scroll
 4. Click the result or press **Ctrl+C** to copy
 5. Press **Esc** to reset and start over
 6. Show to leader/officer for approval
@@ -108,5 +117,5 @@ Ask leaders/Officers for name approvals
 
 ---
 
-**© 2026 ᴳᴿメʙʟᴏᴏᴅʟɪɴᴇ | All Rights Reserved**  
+**© 2026 ᴳᴿᴮメʙʟᴏᴏᴅʟɪɴᴇ | All Rights Reserved**  
 *"Blood makes us related — Loyalty makes us family."*

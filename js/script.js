@@ -51,8 +51,8 @@ let longPressActive = false;
 let longPressInterval = null;
 let longPressSpeed = 200; // Initial speed in ms
 const LONG_PRESS_DELAY = 3000; // 3 seconds to activate
-const MIN_SPEED = 50; // Maximum speed (minimum ms) - increased from 30 for smoother feel
-const SPEED_INCREMENT = 15; // Speed increase per cycle - reduced for smoother acceleration
+const MIN_SPEED = 50; // Maximum speed (minimum ms)
+const SPEED_INCREMENT = 15; // Speed increase per cycle
 
 // Numpad * long press variables (FOR DESKTOP - ONLY NUMPAD)
 let numpadLongPressActive = false;
@@ -67,6 +67,10 @@ let numberKeyPressCount = {};
 let currentAnimation = null;
 let animationTimeout = null;
 
+// Track touch events to prevent conflicts
+let isTouching = false;
+let touchMoved = false;
+
 function toSmallCaps(input) {
   return input.toLowerCase().split('').map(c =>
     c === ' ' ? 'ㅤ' : smallCapsMap[c] || ''
@@ -74,8 +78,10 @@ function toSmallCaps(input) {
 }
 
 function handleAction(event) {
-  // Don't handle if long press is active
-  if (longPressActive) return;
+  // Don't handle if long press is active or if this is a touch event that moved
+  if (longPressActive || (event.type === 'click' && isTouching && touchMoved)) {
+    return;
+  }
   
   if (!isGenerated) {
     generateName();
@@ -223,7 +229,7 @@ function applySymbolAnimation(animationType) {
         currentAnimation = null;
       }
       animationTimeout = null;
-    }, 400); // Slightly less than animation duration
+    }, 400);
   }
 }
 
@@ -284,6 +290,10 @@ function resetGenerator() {
   
   // Remove focus from input box
   document.getElementById('nameInput').blur();
+  
+  // Reset touch tracking
+  isTouching = false;
+  touchMoved = false;
 }
 
 // ==================== MOBILE LONG PRESS FEATURE (♻️ BUTTON ONLY) ====================
@@ -389,24 +399,23 @@ document.addEventListener('keydown', (e) => {
 
   // 1. ENTER → Generate name (only if input box is selected)
   if (e.key === 'Enter' && isInputFocused) {
-    e.preventDefault(); // Prevent form submission if any
+    e.preventDefault();
     if (!isGenerated) {
       generateName();
     } else {
-      // If already generated, treat as single click to cycle
       handleAction({ detail: 1 });
     }
     return;
   }
 
-  // 2. SPACE → For selecting input box (but space works normally when selected)
+  // 2. SPACE → For selecting input box
   if (e.key === ' ' && !isInputFocused) {
     e.preventDefault();
     input.focus();
     return;
   }
 
-  // 3. ESC → Reset/Clear everything and remove focus from input
+  // 3. ESC → Reset/Clear everything
   if (e.key === 'Escape') {
     resetGenerator();
     return;
@@ -419,7 +428,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // 5. Ctrl + C → Copy output/result (only if result is visible)
+  // 5. Ctrl + C → Copy output/result
   if (ctrlCmdPressed && e.key === 'c') {
     const resultEl = document.getElementById('result');
     if (isGenerated && resultEl.classList.contains('visible')) {
@@ -432,90 +441,78 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // 6. Number keys 1-9 → Quick symbol selection with double-click support
+  // 6. Number keys 1-9
   if (isGenerated && e.key >= '1' && e.key <= '9') {
     e.preventDefault();
     const num = parseInt(e.key);
     
-    // Initialize counter for this number key if not exists
     if (!numberKeyPressCount[num]) {
       numberKeyPressCount[num] = 0;
     }
     
-    // Clear existing timer for this number
     if (numberKeyTimers[num]) {
       clearTimeout(numberKeyTimers[num]);
     }
     
-    // Increment press count
     numberKeyPressCount[num]++;
     
-    // Set timer to process after delay
     numberKeyTimers[num] = setTimeout(() => {
       const pressCount = numberKeyPressCount[num];
       
       if (pressCount >= 2) {
-        // DOUBLE CLICK on number key - move forward by that number of symbols
         for (let i = 0; i < num; i++) {
           symbolIndex = (symbolIndex + 1) % symbols.length;
         }
         currentSymbol = symbols[symbolIndex];
         updateSymbolDisplay();
-        applySymbolAnimation('rapid'); // Use rapid animation for multiple jumps
+        applySymbolAnimation('rapid');
       } else {
-        // SINGLE CLICK on number key - jump to that specific symbol
         const targetIndex = num - 1;
         if (targetIndex < symbols.length) {
           symbolIndex = targetIndex;
           currentSymbol = symbols[symbolIndex];
           updateSymbolDisplay();
-          applySymbolAnimation('single'); // Use single animation for direct jump
+          applySymbolAnimation('single');
         }
       }
       
-      // Track in recent symbols
       if (recentSymbols.length >= 10) {
         recentSymbols.shift();
       }
       recentSymbols.push(currentSymbol);
       
-      // Reset counter for this number
       numberKeyPressCount[num] = 0;
       delete numberKeyTimers[num];
-    }, RAPID_CLICK_DELAY); // Use same delay as rapid click detection
+    }, RAPID_CLICK_DELAY);
     return;
   }
 
-  // 7. Arrow Keys → Navigate through symbols (normal behavior)
+  // 7. Arrow Keys
   if (isGenerated) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault(); // Prevent page scrolling
+      e.preventDefault();
       handleScroll('down');
       return;
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault(); // Prevent page scrolling
+      e.preventDefault();
       handleScroll('up');
       return;
     }
   }
   
   // 8. Numpad * ONLY - Block it completely from typing
-  if (e.code === 'NumpadMultiply' || e.key === '*' && e.location === 3) {
-    e.preventDefault(); // This prevents it from typing in any input
+  if (e.code === 'NumpadMultiply') {
+    e.preventDefault();
     if (isGenerated && !numpadLongPressActive) {
       startNumpadLongPress();
     }
     return;
   }
-  
-  // Regular * key (Shift+8) should work normally for typing
-  // So we don't block it
 });
 
 // Handle keyup for Numpad * to stop long press
 document.addEventListener('keyup', (e) => {
-  // Only stop for Numpad *, not regular *
-  if (e.code === 'NumpadMultiply' || e.key === '*' && e.location === 3) {
+  if (e.code === 'NumpadMultiply') {
     e.preventDefault();
     stopNumpadLongPress();
   }
@@ -559,36 +556,48 @@ document.getElementById('result').addEventListener('click', () => {
   }
 });
 
-// Button event listeners
+// Button event listeners - FIXED FOR MOBILE
 const actionBtn = document.getElementById('actionBtn');
 
 // Remove any existing onclick attribute
 actionBtn.removeAttribute('onclick');
 
-// Handle click events (single, double, rapid)
+// Handle click events (this works on both desktop and mobile)
 actionBtn.addEventListener('click', handleAction);
-
-// MOBILE ONLY: Touch events for long press on ♻️ button
-actionBtn.addEventListener('touchstart', (e) => {
-  e.preventDefault(); // Prevent default touch behavior
-  startLongPress();
-}, { passive: false });
-
-actionBtn.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  stopLongPress();
-});
-
-actionBtn.addEventListener('touchcancel', (e) => {
-  e.preventDefault();
-  stopLongPress();
-});
 
 // Handle double-click separately
 actionBtn.addEventListener('dblclick', (e) => {
   e.preventDefault();
   stopLongPress(); // Stop any pending mobile long press
   handleAction(e);
+});
+
+// MOBILE TOUCH HANDLING - Fixed to not interfere with clicks
+actionBtn.addEventListener('touchstart', (e) => {
+  isTouching = true;
+  touchMoved = false;
+  startLongPress();
+}, { passive: true });
+
+actionBtn.addEventListener('touchmove', (e) => {
+  touchMoved = true;
+  stopLongPress();
+});
+
+actionBtn.addEventListener('touchend', (e) => {
+  if (!touchMoved && !longPressActive) {
+    // This was a simple tap, let the click handler deal with it
+    // We don't call handleAction here to avoid double-firing
+  }
+  stopLongPress();
+  isTouching = false;
+  touchMoved = false;
+});
+
+actionBtn.addEventListener('touchcancel', (e) => {
+  stopLongPress();
+  isTouching = false;
+  touchMoved = false;
 });
 
 function copyInvisible() {

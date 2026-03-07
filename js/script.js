@@ -39,22 +39,11 @@ let symbolIndex = 0;
 let clickCount = 0;
 let recentSymbols = [];
 
-// Click detection variables
+// Rapid click detection variables
 let clickTimer = null;
-let lastClickTime = 0;
-const DOUBLE_CLICK_DELAY = 300;
+let rapidClickCount = 0;
 const RAPID_CLICK_DELAY = 300;
 const RAPID_CLICK_THRESHOLD = 3;
-let rapidClickCount = 0;
-
-// Long press variables
-let longPressTimer = null;
-let isLongPressing = false;
-const LONG_PRESS_DELAY = 3000; // 3 seconds
-let longPressInterval = null;
-let longPressSpeed = 100; // Initial speed (ms per symbol change)
-const MIN_SPEED = 30; // Maximum speed (minimum ms)
-const SPEED_INCREMENT = 10; // Speed increase per cycle
 
 // Number key double-click tracking
 let numberKeyTimers = {};
@@ -63,6 +52,10 @@ let numberKeyPressCount = {};
 // Track current animation to prevent conflicts
 let currentAnimation = null;
 
+// Track last click time for double-click detection on mobile
+let lastClickTime = 0;
+const DOUBLE_CLICK_DELAY = 300;
+
 function toSmallCaps(input) {
   return input.toLowerCase().split('').map(c =>
     c === ' ' ? 'ㅤ' : smallCapsMap[c] || ''
@@ -70,43 +63,57 @@ function toSmallCaps(input) {
 }
 
 function handleAction(event) {
+  // Prevent default and stop propagation for mobile
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  
   if (!isGenerated) {
     generateName();
     return;
   }
 
+  // For mobile: detect double click using time difference
   const currentTime = new Date().getTime();
-  const timeSinceLastClick = currentTime - lastClickTime;
-  
-  // Clear existing timers
-  if (clickTimer) {
-    clearTimeout(clickTimer);
-    clickTimer = null;
-  }
+  const timeDiff = currentTime - lastClickTime;
+  lastClickTime = currentTime;
 
-  // Check for double click
-  if (timeSinceLastClick < DOUBLE_CLICK_DELAY) {
-    // This is a double click
-    handleDoubleClick();
-    lastClickTime = 0; // Reset to prevent triple click detection
+  // Check if this is a double click (for mobile)
+  if (timeDiff < DOUBLE_CLICK_DELAY) {
+    // DOUBLE CLICK
+    currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
+    applySymbolAnimation('double');
+    
+    // Reset rapid click detection
+    if (clickTimer) {
+      clearTimeout(clickTimer);
+      rapidClickCount = 0;
+    }
     return;
   }
 
-  // Single click - start timer to check for rapid clicks
-  lastClickTime = currentTime;
+  // For single clicks, handle rapid click detection
   rapidClickCount++;
+  
+  if (clickTimer) {
+    clearTimeout(clickTimer);
+  }
   
   clickTimer = setTimeout(() => {
     if (rapidClickCount >= RAPID_CLICK_THRESHOLD) {
       // RAPID CLICKS
-      handleRapidClicks(rapidClickCount);
+      for (let i = 0; i < rapidClickCount; i++) {
+        symbolIndex = (symbolIndex + 1) % symbols.length;
+      }
+      currentSymbol = symbols[symbolIndex];
+      applySymbolAnimation('rapid');
     } else {
       // SINGLE CLICK
       handleSingleClick();
     }
     
     rapidClickCount = 0;
-    clickTimer = null;
   }, RAPID_CLICK_DELAY);
 }
 
@@ -127,32 +134,13 @@ function handleSingleClick() {
   }
   
   // Track recent symbols
-  updateRecentSymbols(currentSymbol);
-  
-  // Apply SINGLE CLICK animation
-  applySymbolAnimation('single');
-}
-
-function handleDoubleClick() {
-  currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
-  updateRecentSymbols(currentSymbol);
-  applySymbolAnimation('double');
-}
-
-function handleRapidClicks(count) {
-  for (let i = 0; i < count; i++) {
-    symbolIndex = (symbolIndex + 1) % symbols.length;
-  }
-  currentSymbol = symbols[symbolIndex];
-  updateRecentSymbols(currentSymbol);
-  applySymbolAnimation('rapid');
-}
-
-function updateRecentSymbols(symbol) {
   if (recentSymbols.length >= 10) {
     recentSymbols.shift();
   }
-  recentSymbols.push(symbol);
+  recentSymbols.push(currentSymbol);
+  
+  // Apply SINGLE CLICK animation
+  applySymbolAnimation('single');
 }
 
 function generateName() {
@@ -188,7 +176,6 @@ function handleScroll(direction) {
     currentSymbol = symbols[symbolIndex];
     applySymbolAnimation('scrollUp');
   }
-  updateRecentSymbols(currentSymbol);
 }
 
 function applySymbolAnimation(animationType) {
@@ -201,7 +188,6 @@ function applySymbolAnimation(animationType) {
   
   symbolSpan.textContent = currentSymbol;
   
-  // Force reflow to restart animation
   void symbolSpan.offsetWidth;
   
   const animationClass = {
@@ -209,23 +195,19 @@ function applySymbolAnimation(animationType) {
     'scrollDown': 'scroll-down-animation',
     'scrollUp': 'scroll-up-animation',
     'double': 'double-click-animation',
-    'rapid': 'rapid-click-animation',
-    'longPress': 'long-press-animation'
+    'rapid': 'rapid-click-animation'
   }[animationType];
   
   if (animationClass) {
     symbolSpan.classList.add(animationClass);
     currentAnimation = animationClass;
     
-    // Only remove non-longPress animations automatically
-    if (animationType !== 'longPress') {
-      setTimeout(() => {
-        symbolSpan.classList.remove(animationClass);
-        if (currentAnimation === animationClass) {
-          currentAnimation = null;
-        }
-      }, 500);
-    }
+    setTimeout(() => {
+      symbolSpan.classList.remove(animationClass);
+      if (currentAnimation === animationClass) {
+        currentAnimation = null;
+      }
+    }, 500);
   }
 }
 
@@ -251,12 +233,10 @@ function resetGenerator() {
   clickCount = 0;
   recentSymbols = [];
   
-  // Clear all timers
   if (clickTimer) {
     clearTimeout(clickTimer);
-    clickTimer = null;
+    rapidClickCount = 0;
   }
-  stopLongPress();
   
   // Clear all number key timers
   Object.keys(numberKeyTimers).forEach(key => {
@@ -281,123 +261,6 @@ function resetGenerator() {
   document.getElementById('nameInput').blur();
 }
 
-// ==================== LONG PRESS FUNCTIONALITY ====================
-
-function startLongPress() {
-  if (!isGenerated || isLongPressing) return;
-  
-  isLongPressing = true;
-  longPressSpeed = 100; // Reset speed
-  
-  // NO INDICATOR SHOWN - Removed completely
-  
-  // Start rapid symbol change
-  longPressInterval = setInterval(() => {
-    symbolIndex = (symbolIndex + 1) % symbols.length;
-    currentSymbol = symbols[symbolIndex];
-    applySymbolAnimation('longPress');
-    updateRecentSymbols(currentSymbol);
-    
-    // Gradually increase speed
-    longPressSpeed = Math.max(MIN_SPEED, longPressSpeed - SPEED_INCREMENT);
-    
-    // Clear and reset interval with new speed
-    clearInterval(longPressInterval);
-    longPressInterval = setInterval(() => {
-      symbolIndex = (symbolIndex + 1) % symbols.length;
-      currentSymbol = symbols[symbolIndex];
-      applySymbolAnimation('longPress');
-      updateRecentSymbols(currentSymbol);
-    }, longPressSpeed);
-    
-  }, longPressSpeed);
-}
-
-function stopLongPress() {
-  if (longPressInterval) {
-    clearInterval(longPressInterval);
-    longPressInterval = null;
-  }
-  
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-  
-  if (isLongPressing) {
-    isLongPressing = false;
-    
-    // NO INDICATOR TO HIDE - Removed completely
-    
-    // Remove long press animation
-    const symbolSpan = document.querySelector('#result .symbol');
-    if (symbolSpan && currentAnimation === 'long-press-animation') {
-      symbolSpan.classList.remove('long-press-animation');
-      currentAnimation = null;
-    }
-  }
-}
-
-// REMOVED: showLongPressIndicator function
-// REMOVED: hideLongPressIndicator function
-
-// ==================== EVENT LISTENERS FOR LONG PRESS ====================
-
-// For mobile: touch events
-const actionBtn = document.getElementById('actionBtn');
-actionBtn.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (!isGenerated) return;
-  
-  longPressTimer = setTimeout(() => {
-    startLongPress();
-  }, LONG_PRESS_DELAY);
-});
-
-actionBtn.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-  stopLongPress();
-});
-
-actionBtn.addEventListener('touchcancel', (e) => {
-  e.preventDefault();
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-  stopLongPress();
-});
-
-// For desktop: mouse down/up
-actionBtn.addEventListener('mousedown', (e) => {
-  if (!isGenerated) return;
-  
-  longPressTimer = setTimeout(() => {
-    startLongPress();
-  }, LONG_PRESS_DELAY);
-});
-
-actionBtn.addEventListener('mouseup', (e) => {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-  stopLongPress();
-});
-
-actionBtn.addEventListener('mouseleave', (e) => {
-  // Stop if mouse leaves button while pressing
-  if (longPressTimer) {
-    clearTimeout(longPressTimer);
-    longPressTimer = null;
-  }
-  stopLongPress();
-});
-
 // ==================== KEYBOARD SHORTCUTS ====================
 
 document.addEventListener('keydown', (e) => {
@@ -406,50 +269,35 @@ document.addEventListener('keydown', (e) => {
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const ctrlCmdPressed = isMac ? e.metaKey : e.ctrlKey;
 
-  // SPECIAL HANDLING FOR NUMPAD STAR KEY - Always prevent it from typing
-  if (e.key === '*' && e.code === 'NumpadMultiply') {
-    e.preventDefault(); // Always prevent numpad star from being typed
-    
-    // Only trigger long press if generated
-    if (isGenerated && !isLongPressing) {
-      startLongPress();
-    }
-    return;
-  }
-
   // 1. ENTER → Generate name (only if input box is selected)
   if (e.key === 'Enter' && isInputFocused) {
-    e.preventDefault();
+    e.preventDefault(); // Prevent form submission if any
     if (!isGenerated) {
       generateName();
     } else {
       // If already generated, treat as single click to cycle
       handleAction({ detail: 1 });
     }
-    return;
   }
 
-  // 2. SPACE → For selecting input box
+  // 2. SPACE → For selecting input box (but space works normally when selected)
   if (e.key === ' ' && !isInputFocused) {
     e.preventDefault();
     input.focus();
-    return;
   }
 
-  // 3. ESC → Reset/Clear everything
+  // 3. ESC → Reset/Clear everything and remove focus from input
   if (e.key === 'Escape') {
     resetGenerator();
-    return;
   }
 
   // 4. Ctrl/Cmd + D → Toggle dark/light theme
   if (ctrlCmdPressed && e.key === 'd') {
     e.preventDefault();
     toggleTheme();
-    return;
   }
 
-  // 5. Ctrl + C → Copy output/result
+  // 5. Ctrl + C → Copy output/result (only if result is visible)
   if (ctrlCmdPressed && e.key === 'c') {
     const resultEl = document.getElementById('result');
     if (isGenerated && resultEl.classList.contains('visible')) {
@@ -459,69 +307,68 @@ document.addEventListener('keydown', (e) => {
         showCopiedMessage();
       });
     }
-    return;
   }
 
-  // 6. Number keys 1-9 (only when generated and NOT typing in input)
-  if (isGenerated && !isInputFocused && e.key >= '1' && e.key <= '9') {
+  // 6. Number keys 1-9 → Quick symbol selection with double-click support
+  if (isGenerated && e.key >= '1' && e.key <= '9') {
     e.preventDefault();
     const num = parseInt(e.key);
     
+    // Initialize counter for this number key if not exists
     if (!numberKeyPressCount[num]) {
       numberKeyPressCount[num] = 0;
     }
     
+    // Clear existing timer for this number
     if (numberKeyTimers[num]) {
       clearTimeout(numberKeyTimers[num]);
     }
     
+    // Increment press count
     numberKeyPressCount[num]++;
     
+    // Set timer to process after delay
     numberKeyTimers[num] = setTimeout(() => {
       const pressCount = numberKeyPressCount[num];
       
       if (pressCount >= 2) {
+        // DOUBLE CLICK on number key - move forward by that number of symbols
         for (let i = 0; i < num; i++) {
           symbolIndex = (symbolIndex + 1) % symbols.length;
         }
         currentSymbol = symbols[symbolIndex];
-        applySymbolAnimation('rapid');
+        applySymbolAnimation('rapid'); // Use rapid animation for multiple jumps
       } else {
+        // SINGLE CLICK on number key - jump to that specific symbol
         const targetIndex = num - 1;
         if (targetIndex < symbols.length) {
           symbolIndex = targetIndex;
           currentSymbol = symbols[symbolIndex];
-          applySymbolAnimation('single');
+          applySymbolAnimation('single'); // Use single animation for direct jump
         }
       }
       
-      updateRecentSymbols(currentSymbol);
+      // Track in recent symbols
+      if (recentSymbols.length >= 10) {
+        recentSymbols.shift();
+      }
+      recentSymbols.push(currentSymbol);
       
+      // Reset counter for this number
       numberKeyPressCount[num] = 0;
       delete numberKeyTimers[num];
-    }, RAPID_CLICK_DELAY);
-    return;
+    }, RAPID_CLICK_DELAY); // Use same delay as rapid click detection
   }
 
-  // 7. Arrow Keys (only when generated)
+  // 7. Arrow Keys → Navigate through symbols (alternative for scroll)
   if (isGenerated) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
       e.preventDefault();
       handleScroll('down');
-      return;
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
       e.preventDefault();
       handleScroll('up');
-      return;
     }
-  }
-});
-
-document.addEventListener('keyup', (e) => {
-  // Stop long press on numpad * key release
-  if (e.key === '*' && e.code === 'NumpadMultiply' && isLongPressing) {
-    e.preventDefault();
-    stopLongPress();
   }
 });
 
@@ -631,7 +478,9 @@ inputField.addEventListener('beforeinput', (e) => {
   }
 });
 
-// Scroll wheel functionality
+// Scroll wheel functionality - Fix for mobile
+const actionBtn = document.getElementById('actionBtn');
+
 actionBtn.addEventListener('wheel', (e) => {
   e.preventDefault();
   
@@ -650,6 +499,12 @@ actionBtn.addEventListener('wheel', (e) => {
     handleScroll('down');
   }
 });
+
+// Add touch event support for mobile
+actionBtn.addEventListener('touchstart', (e) => {
+  // Prevent default to avoid double-tap zoom
+  e.preventDefault();
+}, { passive: false });
 
 // Popup Functionality
 async function showLocalizedPopup() {
@@ -731,3 +586,13 @@ creditName.addEventListener('click', () => {
     }, 300);
   });
 });
+
+// Fix for mobile button clicks
+actionBtn.addEventListener('click', (e) => {
+  handleAction(e);
+});
+
+// Prevent any interference from wheel event on mobile
+actionBtn.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+}, { passive: false });

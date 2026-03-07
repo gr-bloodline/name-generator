@@ -45,16 +45,27 @@ let rapidClickCount = 0;
 const RAPID_CLICK_DELAY = 300;
 const RAPID_CLICK_THRESHOLD = 3;
 
+// Long press variables (ONLY FOR MOBILE)
+let longPressTimer = null;
+let longPressActive = false;
+let longPressInterval = null;
+let longPressSpeed = 200; // Initial speed in ms
+const LONG_PRESS_DELAY = 3000; // 3 seconds to activate
+const MIN_SPEED = 50; // Maximum speed (minimum ms) - increased from 30 for smoother feel
+const SPEED_INCREMENT = 15; // Speed increase per cycle - reduced for smoother acceleration
+
+// Numpad * long press variables (FOR DESKTOP - ONLY NUMPAD)
+let numpadLongPressActive = false;
+let numpadLongPressInterval = null;
+let numpadLongPressSpeed = 200; // Initial speed in ms
+
 // Number key double-click tracking
 let numberKeyTimers = {};
 let numberKeyPressCount = {};
 
 // Track current animation to prevent conflicts
 let currentAnimation = null;
-
-// Track last click time for double-click detection on mobile
-let lastClickTime = 0;
-const DOUBLE_CLICK_DELAY = 300;
+let animationTimeout = null;
 
 function toSmallCaps(input) {
   return input.toLowerCase().split('').map(c =>
@@ -63,33 +74,19 @@ function toSmallCaps(input) {
 }
 
 function handleAction(event) {
-  // Prevent default and stop propagation for mobile
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
+  // Don't handle if long press is active
+  if (longPressActive) return;
   
   if (!isGenerated) {
     generateName();
     return;
   }
 
-  // For mobile: detect double click using time difference
-  const currentTime = new Date().getTime();
-  const timeDiff = currentTime - lastClickTime;
-  lastClickTime = currentTime;
-
-  // Check if this is a double click (for mobile)
-  if (timeDiff < DOUBLE_CLICK_DELAY) {
-    // DOUBLE CLICK
+  // DOUBLE CLICK
+  if (event && event.detail === 2) {
     currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
+    updateSymbolDisplay();
     applySymbolAnimation('double');
-    
-    // Reset rapid click detection
-    if (clickTimer) {
-      clearTimeout(clickTimer);
-      rapidClickCount = 0;
-    }
     return;
   }
 
@@ -107,6 +104,7 @@ function handleAction(event) {
         symbolIndex = (symbolIndex + 1) % symbols.length;
       }
       currentSymbol = symbols[symbolIndex];
+      updateSymbolDisplay();
       applySymbolAnimation('rapid');
     } else {
       // SINGLE CLICK
@@ -139,6 +137,7 @@ function handleSingleClick() {
   }
   recentSymbols.push(currentSymbol);
   
+  updateSymbolDisplay();
   // Apply SINGLE CLICK animation
   applySymbolAnimation('single');
 }
@@ -167,14 +166,23 @@ function generateName() {
 }
 
 function handleScroll(direction) {
-  if (direction === 'down') {
+  if (direction === 'down' || direction === 'right') {
     symbolIndex = (symbolIndex + 1) % symbols.length;
     currentSymbol = symbols[symbolIndex];
+    updateSymbolDisplay();
     applySymbolAnimation('scrollDown');
-  } else if (direction === 'up') {
+  } else if (direction === 'up' || direction === 'left') {
     symbolIndex = (symbolIndex - 1 + symbols.length) % symbols.length;
     currentSymbol = symbols[symbolIndex];
+    updateSymbolDisplay();
     applySymbolAnimation('scrollUp');
+  }
+}
+
+function updateSymbolDisplay() {
+  const symbolSpan = document.querySelector('#result .symbol');
+  if (symbolSpan) {
+    symbolSpan.textContent = currentSymbol;
   }
 }
 
@@ -182,12 +190,17 @@ function applySymbolAnimation(animationType) {
   const symbolSpan = document.querySelector('#result .symbol');
   if (!symbolSpan) return;
   
+  // Clear any existing animation timeout
+  if (animationTimeout) {
+    clearTimeout(animationTimeout);
+  }
+  
+  // Remove current animation class
   if (currentAnimation) {
     symbolSpan.classList.remove(currentAnimation);
   }
   
-  symbolSpan.textContent = currentSymbol;
-  
+  // Force reflow
   void symbolSpan.offsetWidth;
   
   const animationClass = {
@@ -195,19 +208,22 @@ function applySymbolAnimation(animationType) {
     'scrollDown': 'scroll-down-animation',
     'scrollUp': 'scroll-up-animation',
     'double': 'double-click-animation',
-    'rapid': 'rapid-click-animation'
+    'rapid': 'rapid-click-animation',
+    'longpress': 'rapid-click-animation' // Use rapid animation for long press
   }[animationType];
   
   if (animationClass) {
     symbolSpan.classList.add(animationClass);
     currentAnimation = animationClass;
     
-    setTimeout(() => {
+    // Remove animation class after it completes
+    animationTimeout = setTimeout(() => {
       symbolSpan.classList.remove(animationClass);
       if (currentAnimation === animationClass) {
         currentAnimation = null;
       }
-    }, 500);
+      animationTimeout = null;
+    }, 400); // Slightly less than animation duration
   }
 }
 
@@ -226,6 +242,10 @@ function updateResult() {
 }
 
 function resetGenerator() {
+  // Stop any ongoing long press
+  stopLongPress();
+  stopNumpadLongPress();
+  
   isGenerated = false;
   currentSymbol = '';
   baseName = '';
@@ -236,6 +256,11 @@ function resetGenerator() {
   if (clickTimer) {
     clearTimeout(clickTimer);
     rapidClickCount = 0;
+  }
+  
+  if (animationTimeout) {
+    clearTimeout(animationTimeout);
+    animationTimeout = null;
   }
   
   // Clear all number key timers
@@ -261,6 +286,99 @@ function resetGenerator() {
   document.getElementById('nameInput').blur();
 }
 
+// ==================== MOBILE LONG PRESS FEATURE (♻️ BUTTON ONLY) ====================
+
+function startLongPress() {
+  if (!isGenerated || longPressActive) return;
+  
+  longPressTimer = setTimeout(() => {
+    longPressActive = true;
+    longPressSpeed = 200; // Reset speed
+    
+    // Function to handle symbol advancement
+    const advanceSymbol = () => {
+      symbolIndex = (symbolIndex + 1) % symbols.length;
+      currentSymbol = symbols[symbolIndex];
+      updateSymbolDisplay();
+      applySymbolAnimation('longpress');
+    };
+    
+    // Start auto-scrolling
+    longPressInterval = setInterval(() => {
+      advanceSymbol();
+      
+      // Accelerate smoothly
+      longPressSpeed = Math.max(MIN_SPEED, longPressSpeed - SPEED_INCREMENT);
+      
+      // Clear and reset interval with new speed
+      clearInterval(longPressInterval);
+      longPressInterval = setInterval(advanceSymbol, longPressSpeed);
+      
+    }, longPressSpeed);
+    
+    // Visual feedback - change button opacity
+    document.getElementById('actionBtn').style.opacity = '0.7';
+    
+  }, LONG_PRESS_DELAY);
+}
+
+function stopLongPress() {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+  
+  if (longPressInterval) {
+    clearInterval(longPressInterval);
+    longPressInterval = null;
+  }
+  
+  if (longPressActive) {
+    longPressActive = false;
+    document.getElementById('actionBtn').style.opacity = '1';
+  }
+}
+
+// ==================== DESKTOP NUMPAD * LONG PRESS FEATURE (ONLY NUMPAD *) ====================
+
+function startNumpadLongPress() {
+  if (!isGenerated || numpadLongPressActive) return;
+  
+  numpadLongPressActive = true;
+  numpadLongPressSpeed = 200; // Reset speed
+  
+  // Function to handle symbol advancement
+  const advanceSymbol = () => {
+    symbolIndex = (symbolIndex + 1) % symbols.length;
+    currentSymbol = symbols[symbolIndex];
+    updateSymbolDisplay();
+    applySymbolAnimation('longpress');
+  };
+  
+  // Start auto-scrolling
+  numpadLongPressInterval = setInterval(() => {
+    advanceSymbol();
+    
+    // Accelerate smoothly
+    numpadLongPressSpeed = Math.max(MIN_SPEED, numpadLongPressSpeed - SPEED_INCREMENT);
+    
+    // Clear and reset interval with new speed
+    clearInterval(numpadLongPressInterval);
+    numpadLongPressInterval = setInterval(advanceSymbol, numpadLongPressSpeed);
+    
+  }, numpadLongPressSpeed);
+}
+
+function stopNumpadLongPress() {
+  if (numpadLongPressInterval) {
+    clearInterval(numpadLongPressInterval);
+    numpadLongPressInterval = null;
+  }
+  numpadLongPressActive = false;
+}
+
+// ==================== END LONG PRESS FEATURES ====================
+
 // ==================== KEYBOARD SHORTCUTS ====================
 
 document.addEventListener('keydown', (e) => {
@@ -278,23 +396,27 @@ document.addEventListener('keydown', (e) => {
       // If already generated, treat as single click to cycle
       handleAction({ detail: 1 });
     }
+    return;
   }
 
   // 2. SPACE → For selecting input box (but space works normally when selected)
   if (e.key === ' ' && !isInputFocused) {
     e.preventDefault();
     input.focus();
+    return;
   }
 
   // 3. ESC → Reset/Clear everything and remove focus from input
   if (e.key === 'Escape') {
     resetGenerator();
+    return;
   }
 
   // 4. Ctrl/Cmd + D → Toggle dark/light theme
   if (ctrlCmdPressed && e.key === 'd') {
     e.preventDefault();
     toggleTheme();
+    return;
   }
 
   // 5. Ctrl + C → Copy output/result (only if result is visible)
@@ -307,6 +429,7 @@ document.addEventListener('keydown', (e) => {
         showCopiedMessage();
       });
     }
+    return;
   }
 
   // 6. Number keys 1-9 → Quick symbol selection with double-click support
@@ -337,6 +460,7 @@ document.addEventListener('keydown', (e) => {
           symbolIndex = (symbolIndex + 1) % symbols.length;
         }
         currentSymbol = symbols[symbolIndex];
+        updateSymbolDisplay();
         applySymbolAnimation('rapid'); // Use rapid animation for multiple jumps
       } else {
         // SINGLE CLICK on number key - jump to that specific symbol
@@ -344,6 +468,7 @@ document.addEventListener('keydown', (e) => {
         if (targetIndex < symbols.length) {
           symbolIndex = targetIndex;
           currentSymbol = symbols[symbolIndex];
+          updateSymbolDisplay();
           applySymbolAnimation('single'); // Use single animation for direct jump
         }
       }
@@ -358,26 +483,43 @@ document.addEventListener('keydown', (e) => {
       numberKeyPressCount[num] = 0;
       delete numberKeyTimers[num];
     }, RAPID_CLICK_DELAY); // Use same delay as rapid click detection
+    return;
   }
 
-  // 7. Arrow Keys → Navigate through symbols (alternative for scroll)
+  // 7. Arrow Keys → Navigate through symbols (normal behavior)
   if (isGenerated) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault();
+      e.preventDefault(); // Prevent page scrolling
       handleScroll('down');
+      return;
     } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault();
+      e.preventDefault(); // Prevent page scrolling
       handleScroll('up');
+      return;
     }
   }
+  
+  // 8. Numpad * ONLY - Block it completely from typing
+  if (e.code === 'NumpadMultiply' || e.key === '*' && e.location === 3) {
+    e.preventDefault(); // This prevents it from typing in any input
+    if (isGenerated && !numpadLongPressActive) {
+      startNumpadLongPress();
+    }
+    return;
+  }
+  
+  // Regular * key (Shift+8) should work normally for typing
+  // So we don't block it
 });
 
-// Prevent default arrow key scrolling when generated
-document.addEventListener('keydown', (e) => {
-  if (isGenerated && (e.key.startsWith('Arrow'))) {
+// Handle keyup for Numpad * to stop long press
+document.addEventListener('keyup', (e) => {
+  // Only stop for Numpad *, not regular *
+  if (e.code === 'NumpadMultiply' || e.key === '*' && e.location === 3) {
     e.preventDefault();
+    stopNumpadLongPress();
   }
-}, { passive: false });
+});
 
 // ==================== END KEYBOARD SHORTCUTS ====================
 
@@ -415,6 +557,38 @@ document.getElementById('result').addEventListener('click', () => {
       showCopiedMessage();
     });
   }
+});
+
+// Button event listeners
+const actionBtn = document.getElementById('actionBtn');
+
+// Remove any existing onclick attribute
+actionBtn.removeAttribute('onclick');
+
+// Handle click events (single, double, rapid)
+actionBtn.addEventListener('click', handleAction);
+
+// MOBILE ONLY: Touch events for long press on ♻️ button
+actionBtn.addEventListener('touchstart', (e) => {
+  e.preventDefault(); // Prevent default touch behavior
+  startLongPress();
+}, { passive: false });
+
+actionBtn.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  stopLongPress();
+});
+
+actionBtn.addEventListener('touchcancel', (e) => {
+  e.preventDefault();
+  stopLongPress();
+});
+
+// Handle double-click separately
+actionBtn.addEventListener('dblclick', (e) => {
+  e.preventDefault();
+  stopLongPress(); // Stop any pending mobile long press
+  handleAction(e);
 });
 
 function copyInvisible() {
@@ -478,9 +652,7 @@ inputField.addEventListener('beforeinput', (e) => {
   }
 });
 
-// Scroll wheel functionality - Fix for mobile
-const actionBtn = document.getElementById('actionBtn');
-
+// Scroll wheel functionality
 actionBtn.addEventListener('wheel', (e) => {
   e.preventDefault();
   
@@ -493,18 +665,16 @@ actionBtn.addEventListener('wheel', (e) => {
     rapidClickCount = 0;
   }
   
+  // Stop any ongoing long press
+  stopLongPress();
+  stopNumpadLongPress();
+  
   if (e.deltaY < 0) {
     handleScroll('up');
   } else {
     handleScroll('down');
   }
 });
-
-// Add touch event support for mobile
-actionBtn.addEventListener('touchstart', (e) => {
-  // Prevent default to avoid double-tap zoom
-  e.preventDefault();
-}, { passive: false });
 
 // Popup Functionality
 async function showLocalizedPopup() {
@@ -586,13 +756,3 @@ creditName.addEventListener('click', () => {
     }, 300);
   });
 });
-
-// Fix for mobile button clicks
-actionBtn.addEventListener('click', (e) => {
-  handleAction(e);
-});
-
-// Prevent any interference from wheel event on mobile
-actionBtn.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-}, { passive: false });

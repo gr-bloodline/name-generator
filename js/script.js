@@ -39,6 +39,15 @@ let symbolIndex = 0;
 let clickCount = 0;
 let recentSymbols = [];
 
+// No-symbol mode variables
+let noSymbolMode = false;
+let maxChars = 7; // Default with symbol
+
+// Dual mode variables
+let dualMode = false;
+let currentSymbolNoSymbol = ''; // Empty always
+let baseNameNoSymbol = '';
+
 // Rapid click detection variables
 let clickTimer = null;
 let rapidClickCount = 0;
@@ -49,15 +58,19 @@ const RAPID_CLICK_THRESHOLD = 3;
 let longPressTimer = null;
 let longPressActive = false;
 let longPressInterval = null;
-let longPressSpeed = 200; // Initial speed in ms
-const LONG_PRESS_DELAY = 3000; // 3 seconds to activate
-const MIN_SPEED = 50; // Maximum speed (minimum ms)
-const SPEED_INCREMENT = 15; // Speed increase per cycle
+let longPressSpeed = 200;
+const LONG_PRESS_DELAY = 3000;
+const MIN_SPEED = 50;
+const SPEED_INCREMENT = 15;
 
-// Numpad * long press variables (FOR DESKTOP - ONLY NUMPAD)
+// Mobile long press for no-symbol mode (2 seconds)
+let noSymbolLongPressTimer = null;
+const NO_SYMBOL_LONG_PRESS_DELAY = 2000; // 2 seconds
+
+// Numpad * long press variables
 let numpadLongPressActive = false;
 let numpadLongPressInterval = null;
-let numpadLongPressSpeed = 200; // Initial speed in ms
+let numpadLongPressSpeed = 200;
 
 // Number key double-click tracking
 let numberKeyTimers = {};
@@ -67,14 +80,140 @@ let numberKeyPressCount = {};
 let currentAnimation = null;
 let animationTimeout = null;
 
-// Track touch events to prevent conflicts
+// Track touch events
 let isTouching = false;
 let touchMoved = false;
+
+// Triple click detection
+let tripleClickTimer = null;
+let tripleClickCount = 0;
+const TRIPLE_CLICK_DELAY = 300;
+
+// Shift key state
+let shiftPressed = false;
 
 function toSmallCaps(input) {
   return input.toLowerCase().split('').map(c =>
     c === ' ' ? 'ㅤ' : smallCapsMap[c] || ''
   ).join('');
+}
+
+// Toggle between symbol and no-symbol mode
+function toggleNoSymbolMode() {
+  noSymbolMode = !noSymbolMode;
+  dualMode = false;
+  maxChars = noSymbolMode ? 8 : 7;
+  
+  // Update input maxlength
+  const input = document.getElementById('nameInput');
+  input.maxLength = maxChars;
+  
+  // Update placeholder based on mode
+  updatePlaceholder();
+  
+  // Update character counter
+  updateCharCount();
+  
+  // Update note text
+  updateNoteText();
+  
+  // Update button appearance
+  updateButtonAppearance();
+  
+  // If generated, update display
+  if (isGenerated) {
+    if (noSymbolMode && !dualMode) {
+      // Show no-symbol version
+      updateResultNoSymbol();
+    } else if (!noSymbolMode && !dualMode) {
+      // Show normal version
+      updateResult();
+    }
+  }
+}
+
+// Toggle dual mode (only works when in no-symbol mode and generated)
+function toggleDualMode() {
+  if (!isGenerated || !noSymbolMode) return;
+  
+  dualMode = !dualMode;
+  
+  if (dualMode) {
+    // Store current no-symbol version if not already stored
+    if (!baseNameNoSymbol) {
+      baseNameNoSymbol = baseName;
+    }
+    // Generate a random premium symbol for the right result
+    currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
+    // Show both versions
+    updateResultDual();
+    // Update note text for dual mode
+    updateNoteTextForDualMode();
+  } else {
+    // Show only the no-symbol version
+    updateResultNoSymbol();
+    // Restore normal note text
+    updateNoteText();
+  }
+  
+  updateButtonAppearance();
+}
+
+// Update note text specifically for dual mode
+function updateNoteTextForDualMode() {
+  const noteEl = document.querySelector('.note');
+  noteEl.textContent = 'Dual mode active - Click left side to copy without symbol, right side to copy with symbol';
+}
+
+// Update button appearance based on current mode
+function updateButtonAppearance() {
+  const actionBtn = document.getElementById('actionBtn');
+  if (!isGenerated) {
+    actionBtn.innerText = '✨';
+  } else if (dualMode) {
+    actionBtn.innerText = '♻️';
+  } else if (noSymbolMode && isGenerated) {
+    actionBtn.innerText = '🎭';
+  } else {
+    actionBtn.innerText = '♻️';
+  }
+}
+
+// Update placeholder based on current mode
+function updatePlaceholder() {
+  const input = document.getElementById('nameInput');
+  if (noSymbolMode) {
+    input.placeholder = "Enter name (max 8 characters)";
+  } else {
+    input.placeholder = "Enter name (max 7 characters)";
+  }
+}
+
+// Update note text based on mode
+function updateNoteText() {
+  const noteEl = document.querySelector('.note');
+  if (noSymbolMode) {
+    noteEl.textContent = 'Your generated name will have no symbol. Max 8 characters total.';
+  } else {
+    noteEl.textContent = 'Your generated name will include a random symbol. Max 12 characters total.';
+  }
+}
+
+// Update character count display
+function updateCharCount() {
+  const input = document.getElementById('nameInput');
+  const charCount = document.getElementById('charCount');
+  charCount.textContent = `${input.value.length}/${maxChars}`;
+}
+
+// Show temporary message
+function showMessage(text, duration = 1500) {
+  const msg = document.getElementById('copiedMessage');
+  msg.textContent = text;
+  msg.style.display = 'block';
+  setTimeout(() => {
+    msg.style.display = 'none';
+  }, duration);
 }
 
 function handleAction(event) {
@@ -83,8 +222,26 @@ function handleAction(event) {
     return;
   }
   
+  // Check for Shift+Click (PC - no symbol mode generation WITHOUT toggling mode)
+  if (shiftPressed && !isGenerated) {
+    generateWithoutSymbol();
+    return;
+  }
+  
   if (!isGenerated) {
     generateName();
+    return;
+  }
+
+  // In dual mode, cycle only the "with symbol" version
+  if (dualMode) {
+    handleSymbolCycle();
+    return;
+  }
+  
+  // In no-symbol mode with generation, toggle dual mode
+  if (noSymbolMode && isGenerated) {
+    toggleDualMode();
     return;
   }
 
@@ -110,7 +267,11 @@ function handleAction(event) {
         symbolIndex = (symbolIndex + 1) % symbols.length;
       }
       currentSymbol = symbols[symbolIndex];
-      updateSymbolDisplay();
+      if (dualMode) {
+        updateResultDual();
+      } else {
+        updateSymbolDisplay();
+      }
       applySymbolAnimation('rapid');
     } else {
       // SINGLE CLICK
@@ -119,6 +280,32 @@ function handleAction(event) {
     
     rapidClickCount = 0;
   }, RAPID_CLICK_DELAY);
+}
+
+function handleSymbolCycle() {
+  clickCount++;
+  
+  // 🎲 LUCKY CLICK: Every 5th click
+  if (clickCount % 5 === 0) {
+    currentSymbol = symbols[Math.floor(Math.random() * symbols.length)];
+  }
+  // Recent random: After 10 clicks, every 10th click
+  else if (clickCount > 10 && clickCount % 10 === 1 && recentSymbols.length >= 10) {
+    currentSymbol = recentSymbols[Math.floor(Math.random() * recentSymbols.length)];
+  } else {
+    // Normal sequential
+    currentSymbol = symbols[symbolIndex];
+    symbolIndex = (symbolIndex + 1) % symbols.length;
+  }
+  
+  // Track recent symbols
+  if (recentSymbols.length >= 10) {
+    recentSymbols.shift();
+  }
+  recentSymbols.push(currentSymbol);
+  
+  updateResultDual();
+  applySymbolAnimation('single');
 }
 
 function handleSingleClick() {
@@ -144,23 +331,33 @@ function handleSingleClick() {
   recentSymbols.push(currentSymbol);
   
   updateSymbolDisplay();
-  // Apply SINGLE CLICK animation
   applySymbolAnimation('single');
 }
 
 function generateName() {
   const input = document.getElementById('nameInput').value.trim();
-  if (input.length === 0 || input.length > 7) {
-    alert('Please enter a name with 1–7 characters.');
+  const currentMax = noSymbolMode ? 8 : 7;
+  
+  if (input.length === 0 || input.length > currentMax) {
+    alert(`Please enter a name with 1–${currentMax} characters.`);
     return;
   }
+  
   baseName = `ᴳᴿᴮメ${toSmallCaps(input)}`;
   
-  currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
+  if (noSymbolMode) {
+    // In no-symbol mode, generate without symbol
+    currentSymbol = '';
+    baseNameNoSymbol = baseName;
+    updateResultNoSymbol();
+  } else {
+    // In normal mode, generate with symbol
+    currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
+    updateResult();
+  }
   
-  updateResult();
   isGenerated = true;
-  document.getElementById('actionBtn').innerText = '♻️';
+  updateButtonAppearance();
   
   const inputWrapper = document.querySelector('.input-wrapper');
   inputWrapper.classList.add('generated');
@@ -168,19 +365,76 @@ function generateName() {
   symbolIndex = 0;
   clickCount = 0;
   recentSymbols = [];
-  recentSymbols.push(currentSymbol);
+  if (currentSymbol) {
+    recentSymbols.push(currentSymbol);
+  }
+}
+
+// Generate without symbol WITHOUT changing toggle mode (for Shift+Click and mobile long press)
+function generateWithoutSymbol() {
+  const input = document.getElementById('nameInput').value.trim();
+  const currentMax = 8; // Always 8 for no-symbol generation
+  
+  if (input.length === 0 || input.length > currentMax) {
+    alert(`Please enter a name with 1–8 characters.`);
+    return;
+  }
+  
+  baseName = `ᴳᴿᴮメ${toSmallCaps(input)}`;
+  currentSymbol = ''; // No symbol
+  noSymbolMode = true;
+  maxChars = 8;
+  const inputElement = document.getElementById('nameInput');
+  inputElement.maxLength = maxChars;
+  updatePlaceholder();
+  updateNoteText();
+  updateCharCount();
+  
+  updateResultNoSymbol();
+  isGenerated = true;
+  updateButtonAppearance();
+  
+  const inputWrapper = document.querySelector('.input-wrapper');
+  inputWrapper.classList.add('generated');
+  
+  symbolIndex = 0;
+  clickCount = 0;
+  recentSymbols = [];
+}
+
+// Remove symbol from current name (triple click)
+function removeSymbolFromCurrent() {
+  if (!isGenerated) return;
+  
+  // Temporarily remove symbol without changing mode
+  if (currentSymbol) {
+    currentSymbol = '';
+    if (dualMode) {
+      updateResultDual();
+    } else {
+      updateResult();
+    }
+  }
 }
 
 function handleScroll(direction) {
   if (direction === 'down' || direction === 'right') {
     symbolIndex = (symbolIndex + 1) % symbols.length;
     currentSymbol = symbols[symbolIndex];
-    updateSymbolDisplay();
+    if (dualMode) {
+      updateResultDual();
+    } else {
+      updateSymbolDisplay();
+    }
     applySymbolAnimation('scrollDown');
   } else if (direction === 'up' || direction === 'left') {
     symbolIndex = (symbolIndex - 1 + symbols.length) % symbols.length;
     currentSymbol = symbols[symbolIndex];
-    updateSymbolDisplay();
+    if (dualMode) {
+      updateResultDual();
+    } else {
+      updateSymbolDisplay();
+    }
     applySymbolAnimation('scrollUp');
   }
 }
@@ -194,19 +448,16 @@ function updateSymbolDisplay() {
 
 function applySymbolAnimation(animationType) {
   const symbolSpan = document.querySelector('#result .symbol');
-  if (!symbolSpan) return;
+  if (!symbolSpan || !currentSymbol) return;
   
-  // Clear any existing animation timeout
   if (animationTimeout) {
     clearTimeout(animationTimeout);
   }
   
-  // Remove current animation class
   if (currentAnimation) {
     symbolSpan.classList.remove(currentAnimation);
   }
   
-  // Force reflow
   void symbolSpan.offsetWidth;
   
   const animationClass = {
@@ -215,14 +466,13 @@ function applySymbolAnimation(animationType) {
     'scrollUp': 'scroll-up-animation',
     'double': 'double-click-animation',
     'rapid': 'rapid-click-animation',
-    'longpress': 'rapid-click-animation' // Use rapid animation for long press
+    'longpress': 'rapid-click-animation'
   }[animationType];
   
   if (animationClass) {
     symbolSpan.classList.add(animationClass);
     currentAnimation = animationClass;
     
-    // Remove animation class after it completes
     animationTimeout = setTimeout(() => {
       symbolSpan.classList.remove(animationClass);
       if (currentAnimation === animationClass) {
@@ -237,24 +487,82 @@ function updateResult() {
   const resultEl = document.getElementById('result');
   resultEl.classList.add('visible');
   resultEl.innerHTML = '';
+  
   const baseSpan = document.createElement('span');
   baseSpan.className = 'base-name';
   baseSpan.textContent = baseName;
+  resultEl.appendChild(baseSpan);
+  
+  // Only add symbol span if there's a symbol
+  if (currentSymbol) {
+    const symbolSpan = document.createElement('span');
+    symbolSpan.className = 'symbol';
+    symbolSpan.textContent = currentSymbol;
+    resultEl.appendChild(symbolSpan);
+  }
+  
+  // Store copy text for easy access
+  resultEl.setAttribute('data-copy-text', baseName + (currentSymbol || ''));
+}
+
+function updateResultNoSymbol() {
+  const resultEl = document.getElementById('result');
+  resultEl.classList.add('visible');
+  resultEl.innerHTML = '';
+  
+  const baseSpan = document.createElement('span');
+  baseSpan.className = 'base-name';
+  baseSpan.textContent = baseName;
+  resultEl.appendChild(baseSpan);
+  
+  // Store copy text
+  resultEl.setAttribute('data-copy-text', baseName);
+}
+
+function updateResultDual() {
+  const resultEl = document.getElementById('result');
+  resultEl.classList.add('visible');
+  resultEl.innerHTML = '';
+  
+  // First version: without symbol
+  const withoutSymbolSpan = document.createElement('span');
+  withoutSymbolSpan.className = 'base-name without-symbol-part';
+  withoutSymbolSpan.textContent = baseNameNoSymbol || baseName;
+  resultEl.appendChild(withoutSymbolSpan);
+  
+  // Add separator
+  const separator = document.createElement('span');
+  separator.textContent = ' · ';
+  separator.style.margin = '0 0.5rem';
+  separator.style.opacity = '0.5';
+  separator.style.pointerEvents = 'none';
+  resultEl.appendChild(separator);
+  
+  // Second version: with symbol
+  const withSymbolSpan = document.createElement('span');
+  withSymbolSpan.className = 'base-name with-symbol-part';
+  withSymbolSpan.textContent = (baseNameNoSymbol || baseName);
+  resultEl.appendChild(withSymbolSpan);
+  
   const symbolSpan = document.createElement('span');
   symbolSpan.className = 'symbol';
   symbolSpan.textContent = currentSymbol;
-  resultEl.appendChild(baseSpan);
   resultEl.appendChild(symbolSpan);
+  
+  // Store both versions separately
+  resultEl.setAttribute('data-without-symbol', baseNameNoSymbol || baseName);
+  resultEl.setAttribute('data-with-symbol', (baseNameNoSymbol || baseName) + currentSymbol);
 }
 
 function resetGenerator() {
-  // Stop any ongoing long press
   stopLongPress();
   stopNumpadLongPress();
   
   isGenerated = false;
+  dualMode = false;
   currentSymbol = '';
   baseName = '';
+  baseNameNoSymbol = '';
   symbolIndex = 0;
   clickCount = 0;
   recentSymbols = [];
@@ -269,7 +577,6 @@ function resetGenerator() {
     animationTimeout = null;
   }
   
-  // Clear all number key timers
   Object.keys(numberKeyTimers).forEach(key => {
     clearTimeout(numberKeyTimers[key]);
   });
@@ -280,56 +587,84 @@ function resetGenerator() {
   resultEl.classList.remove('visible');
   resultEl.innerHTML = '';
   
-  document.getElementById('actionBtn').innerText = '✨';
+  updateButtonAppearance();
   
   const inputWrapper = document.querySelector('.input-wrapper');
   inputWrapper.classList.remove('generated');
   
   document.getElementById('nameInput').value = '';
-  document.getElementById('charCount').textContent = '0/7';
+  updateCharCount();
   
-  // Remove focus from input box
   document.getElementById('nameInput').blur();
   
-  // Reset touch tracking
   isTouching = false;
   touchMoved = false;
+  
+  // Restore normal note text
+  updateNoteText();
 }
 
-// ==================== MOBILE LONG PRESS FEATURE (♻️ BUTTON ONLY) ====================
+// ==================== MOBILE LONG PRESS FEATURES ====================
 
+// Original long press for rapid scrolling (3 seconds)
 function startLongPress() {
   if (!isGenerated || longPressActive) return;
   
   longPressTimer = setTimeout(() => {
     longPressActive = true;
-    longPressSpeed = 200; // Reset speed
+    longPressSpeed = 200;
     
-    // Function to handle symbol advancement
     const advanceSymbol = () => {
       symbolIndex = (symbolIndex + 1) % symbols.length;
       currentSymbol = symbols[symbolIndex];
-      updateSymbolDisplay();
+      if (dualMode) {
+        updateResultDual();
+      } else {
+        updateSymbolDisplay();
+      }
       applySymbolAnimation('longpress');
     };
     
-    // Start auto-scrolling
     longPressInterval = setInterval(() => {
       advanceSymbol();
-      
-      // Accelerate smoothly
       longPressSpeed = Math.max(MIN_SPEED, longPressSpeed - SPEED_INCREMENT);
-      
-      // Clear and reset interval with new speed
       clearInterval(longPressInterval);
       longPressInterval = setInterval(advanceSymbol, longPressSpeed);
-      
     }, longPressSpeed);
     
-    // Visual feedback - change button opacity
     document.getElementById('actionBtn').style.opacity = '0.7';
     
   }, LONG_PRESS_DELAY);
+}
+
+// Long press for no-symbol mode (2 seconds) - Mobile only WITHOUT changing toggle and NO MESSAGE
+function startNoSymbolLongPress(e) {
+  if (isGenerated || noSymbolLongPressTimer) return;
+  
+  // Show progress indicator
+  const indicator = document.createElement('div');
+  indicator.className = 'long-press-progress';
+  indicator.innerHTML = '<div class="progress-circle"></div> Hold to generate without symbol...';
+  document.body.appendChild(indicator);
+  
+  noSymbolLongPressTimer = setTimeout(() => {
+    // Generate without symbol but don't change toggle mode
+    generateWithoutSymbol();
+    
+    // Remove indicator
+    const existingIndicator = document.querySelector('.long-press-progress');
+    if (existingIndicator) existingIndicator.remove();
+    noSymbolLongPressTimer = null;
+  }, NO_SYMBOL_LONG_PRESS_DELAY);
+}
+
+function stopNoSymbolLongPress() {
+  if (noSymbolLongPressTimer) {
+    clearTimeout(noSymbolLongPressTimer);
+    noSymbolLongPressTimer = null;
+  }
+  const indicator = document.querySelector('.long-press-progress');
+  if (indicator) indicator.remove();
 }
 
 function stopLongPress() {
@@ -349,33 +684,30 @@ function stopLongPress() {
   }
 }
 
-// ==================== DESKTOP NUMPAD * LONG PRESS FEATURE (ONLY NUMPAD *) ====================
+// ==================== DESKTOP NUMPAD * LONG PRESS ====================
 
 function startNumpadLongPress() {
   if (!isGenerated || numpadLongPressActive) return;
   
   numpadLongPressActive = true;
-  numpadLongPressSpeed = 200; // Reset speed
+  numpadLongPressSpeed = 200;
   
-  // Function to handle symbol advancement
   const advanceSymbol = () => {
     symbolIndex = (symbolIndex + 1) % symbols.length;
     currentSymbol = symbols[symbolIndex];
-    updateSymbolDisplay();
+    if (dualMode) {
+      updateResultDual();
+    } else {
+      updateSymbolDisplay();
+    }
     applySymbolAnimation('longpress');
   };
   
-  // Start auto-scrolling
   numpadLongPressInterval = setInterval(() => {
     advanceSymbol();
-    
-    // Accelerate smoothly
     numpadLongPressSpeed = Math.max(MIN_SPEED, numpadLongPressSpeed - SPEED_INCREMENT);
-    
-    // Clear and reset interval with new speed
     clearInterval(numpadLongPressInterval);
     numpadLongPressInterval = setInterval(advanceSymbol, numpadLongPressSpeed);
-    
   }, numpadLongPressSpeed);
 }
 
@@ -387,8 +719,6 @@ function stopNumpadLongPress() {
   numpadLongPressActive = false;
 }
 
-// ==================== END LONG PRESS FEATURES ====================
-
 // ==================== KEYBOARD SHORTCUTS ====================
 
 document.addEventListener('keydown', (e) => {
@@ -397,52 +727,79 @@ document.addEventListener('keydown', (e) => {
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const ctrlCmdPressed = isMac ? e.metaKey : e.ctrlKey;
 
-  // 1. ENTER → Generate name (only if input box is selected)
+  // Track Shift key
+  if (e.key === 'Shift') {
+    shiftPressed = true;
+  }
+
+  // Alt+Enter → Toggle mode (PC) - Works before and after generation
+  if (e.altKey && e.key === 'Enter') {
+    e.preventDefault();
+    toggleNoSymbolMode();
+    return;
+  }
+
+  // 1. ENTER → Generate name (works like mouse click)
   if (e.key === 'Enter' && isInputFocused) {
     e.preventDefault();
     if (!isGenerated) {
-      generateName();
+      // Check if Shift is pressed with Enter (like Shift+Click)
+      if (shiftPressed) {
+        generateWithoutSymbol();
+      } else {
+        generateName();
+      }
     } else {
       handleAction({ detail: 1 });
     }
     return;
   }
 
-  // 2. SPACE → For selecting input box
+  // 2. SPACE → Focus input
   if (e.key === ' ' && !isInputFocused) {
     e.preventDefault();
     input.focus();
     return;
   }
 
-  // 3. ESC → Reset/Clear everything
+  // 3. ESC → Reset
   if (e.key === 'Escape') {
     resetGenerator();
     return;
   }
 
-  // 4. Ctrl/Cmd + D → Toggle dark/light theme
+  // 4. Ctrl/Cmd + D → Toggle theme
   if (ctrlCmdPressed && e.key === 'd') {
     e.preventDefault();
     toggleTheme();
     return;
   }
 
-  // 5. Ctrl + C → Copy output/result
+  // 5. Ctrl + C → Copy (handles dual mode separately)
   if (ctrlCmdPressed && e.key === 'c') {
     const resultEl = document.getElementById('result');
     if (isGenerated && resultEl.classList.contains('visible')) {
       e.preventDefault();
-      const textToCopy = baseName + currentSymbol;
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        showCopiedMessage();
-      });
+      let textToCopy = '';
+      if (dualMode) {
+        // In dual mode, default to copying the with-symbol version
+        textToCopy = resultEl.getAttribute('data-with-symbol') || (baseNameNoSymbol || baseName) + currentSymbol;
+      } else if (noSymbolMode && !dualMode) {
+        textToCopy = baseName;
+      } else {
+        textToCopy = baseName + (currentSymbol || '');
+      }
+      if (textToCopy) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          showCopiedMessage();
+        });
+      }
     }
     return;
   }
 
   // 6. Number keys 1-9
-  if (isGenerated && e.key >= '1' && e.key <= '9') {
+  if (isGenerated && !dualMode && !noSymbolMode && e.key >= '1' && e.key <= '9') {
     e.preventDefault();
     const num = parseInt(e.key);
     
@@ -488,7 +845,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   // 7. Arrow Keys
-  if (isGenerated) {
+  if (isGenerated && !dualMode) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
       e.preventDefault();
       handleScroll('down');
@@ -500,7 +857,20 @@ document.addEventListener('keydown', (e) => {
     }
   }
   
-  // 8. Numpad * ONLY - Block it completely from typing
+  // Arrow keys also work in dual mode to cycle symbol
+  if (isGenerated && dualMode) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      handleScroll('down');
+      return;
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      handleScroll('up');
+      return;
+    }
+  }
+  
+  // 8. Numpad * ONLY
   if (e.code === 'NumpadMultiply') {
     e.preventDefault();
     if (isGenerated && !numpadLongPressActive) {
@@ -510,8 +880,11 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Handle keyup for Numpad * to stop long press
 document.addEventListener('keyup', (e) => {
+  if (e.key === 'Shift') {
+    shiftPressed = false;
+  }
+  
   if (e.code === 'NumpadMultiply') {
     e.preventDefault();
     stopNumpadLongPress();
@@ -521,17 +894,24 @@ document.addEventListener('keyup', (e) => {
 // ==================== END KEYBOARD SHORTCUTS ====================
 
 // Event Listeners
-document.getElementById('nameInput').addEventListener('input', () => {
-  const input = document.getElementById('nameInput');
-  const charCount = document.getElementById('charCount');
-  charCount.textContent = `${input.value.length}/7`;
+document.getElementById('nameInput').addEventListener('input', (e) => {
+  const input = e.target;
+  updateCharCount();
+  
+  // Auto-adjust max based on mode
+  if (input.value.length > maxChars) {
+    input.value = input.value.slice(0, maxChars);
+    updateCharCount();
+  }
   
   if (isGenerated && input.value === '') {
     resetGenerator();
   } else if (isGenerated && input.value.length > 0) {
     isGenerated = false;
+    dualMode = false;
     currentSymbol = '';
     baseName = '';
+    baseNameNoSymbol = '';
     symbolIndex = 0;
     clickCount = 0;
     recentSymbols = [];
@@ -540,64 +920,160 @@ document.getElementById('nameInput').addEventListener('input', () => {
     resultEl.classList.remove('visible');
     resultEl.innerHTML = '';
     
-    document.getElementById('actionBtn').innerText = '✨';
+    updateButtonAppearance();
     
     const inputWrapper = document.querySelector('.input-wrapper');
     inputWrapper.classList.remove('generated');
+    
+    // Restore normal note text
+    updateNoteText();
   }
 });
 
-document.getElementById('result').addEventListener('click', () => {
-  if (isGenerated) {
-    const textToCopy = baseName + currentSymbol;
+// Handle copy for all modes based on click
+document.getElementById('result').addEventListener('click', (e) => {
+  if (!isGenerated) return;
+  
+  const resultEl = document.getElementById('result');
+  let textToCopy = '';
+  
+  if (dualMode) {
+    // Check which part was clicked
+    const target = e.target;
+    const clickX = e.clientX - resultEl.getBoundingClientRect().left;
+    const totalWidth = resultEl.clientWidth;
+    
+    // If clicked on left side (before separator) or on the without-symbol-part
+    if (clickX < totalWidth / 2 || target.classList.contains('without-symbol-part')) {
+      textToCopy = resultEl.getAttribute('data-without-symbol') || baseNameNoSymbol || baseName;
+    } else {
+      // Right side or with-symbol-part
+      textToCopy = resultEl.getAttribute('data-with-symbol') || (baseNameNoSymbol || baseName) + currentSymbol;
+    }
+  } else if (noSymbolMode && !dualMode) {
+    textToCopy = baseName;
+  } else {
+    textToCopy = baseName + (currentSymbol || '');
+  }
+  
+  if (textToCopy) {
     navigator.clipboard.writeText(textToCopy).then(() => {
       showCopiedMessage();
     });
   }
+  
+  // Handle triple click separately
+  tripleClickCount++;
+  if (tripleClickTimer) clearTimeout(tripleClickTimer);
+  tripleClickTimer = setTimeout(() => {
+    if (tripleClickCount >= 3) {
+      removeSymbolFromCurrent();
+    }
+    tripleClickCount = 0;
+  }, TRIPLE_CLICK_DELAY);
 });
 
-// Button event listeners - FIXED FOR MOBILE
+// Tap on character counter to toggle mode (no visual feedback)
+document.getElementById('charCount').addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleNoSymbolMode();
+});
+
+// Button event listeners
 const actionBtn = document.getElementById('actionBtn');
-
-// Remove any existing onclick attribute
 actionBtn.removeAttribute('onclick');
-
-// Handle click events (this works on both desktop and mobile)
 actionBtn.addEventListener('click', handleAction);
-
-// Handle double-click separately
 actionBtn.addEventListener('dblclick', (e) => {
   e.preventDefault();
-  stopLongPress(); // Stop any pending mobile long press
+  stopLongPress();
   handleAction(e);
 });
 
-// MOBILE TOUCH HANDLING - Fixed to not interfere with clicks
+// MOBILE TOUCH HANDLING
 actionBtn.addEventListener('touchstart', (e) => {
   isTouching = true;
   touchMoved = false;
-  startLongPress();
+  
+  // Differentiate between long press for scroll (3s) and no-symbol mode (2s)
+  if (!isGenerated) {
+    // Not generated yet - long press for no-symbol mode generation
+    startNoSymbolLongPress(e);
+  } else {
+    // Already generated - long press for rapid scrolling
+    startLongPress();
+  }
 }, { passive: true });
 
 actionBtn.addEventListener('touchmove', (e) => {
   touchMoved = true;
   stopLongPress();
+  stopNoSymbolLongPress();
 });
 
 actionBtn.addEventListener('touchend', (e) => {
-  if (!touchMoved && !longPressActive) {
-    // This was a simple tap, let the click handler deal with it
-    // We don't call handleAction here to avoid double-firing
+  if (!touchMoved && !longPressActive && !noSymbolLongPressTimer) {
+    // Simple tap
   }
   stopLongPress();
+  stopNoSymbolLongPress();
   isTouching = false;
   touchMoved = false;
 });
 
 actionBtn.addEventListener('touchcancel', (e) => {
   stopLongPress();
+  stopNoSymbolLongPress();
   isTouching = false;
   touchMoved = false;
+});
+
+// Mobile: Triple tap on input to toggle mode (no message)
+const nameInput = document.getElementById('nameInput');
+let inputTapCount = 0;
+let inputTapTimer = null;
+
+nameInput.addEventListener('touchstart', (e) => {
+  inputTapCount++;
+  
+  if (inputTapTimer) {
+    clearTimeout(inputTapTimer);
+  }
+  
+  inputTapTimer = setTimeout(() => {
+    if (inputTapCount >= 3) {
+      // Triple tap detected - toggle silently
+      e.preventDefault();
+      toggleNoSymbolMode();
+    }
+    inputTapCount = 0;
+  }, TRIPLE_CLICK_DELAY);
+});
+
+// Mobile: Hold spacebar on keyboard to toggle mode (no message)
+let spaceHoldTimer = null;
+let spaceHoldActive = false;
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === ' ' && e.target === nameInput) {
+    // Spacebar held in input
+    if (!spaceHoldActive) {
+      spaceHoldActive = true;
+      spaceHoldTimer = setTimeout(() => {
+        toggleNoSymbolMode();
+        spaceHoldActive = false;
+      }, 500); // Half second hold
+    }
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === ' ') {
+    if (spaceHoldTimer) {
+      clearTimeout(spaceHoldTimer);
+      spaceHoldTimer = null;
+    }
+    spaceHoldActive = false;
+  }
 });
 
 function copyInvisible() {
@@ -609,6 +1085,7 @@ function copyInvisible() {
 
 function showCopiedMessage() {
   const msg = document.getElementById('copiedMessage');
+  msg.textContent = 'Copied!';
   msg.style.display = 'block';
   setTimeout(() => {
     msg.style.display = 'none';
@@ -648,15 +1125,17 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
 });
 
 const inputField = document.getElementById('nameInput');
-const charCount = document.getElementById('charCount');
+const charCountEl = document.getElementById('charCount');
 
 inputField.addEventListener('beforeinput', (e) => {
   const value = inputField.value;
-  if (value.length >= 7 && e.inputType !== 'deleteContentBackward') {
-    charCount.classList.add('limit-warning');
+  const currentMax = noSymbolMode ? 8 : 7;
+  
+  if (value.length >= currentMax && e.inputType !== 'deleteContentBackward') {
+    charCountEl.classList.add('limit-warning');
     if (navigator.vibrate) navigator.vibrate(100);
     setTimeout(() => {
-      charCount.classList.remove('limit-warning');
+      charCountEl.classList.remove('limit-warning');
     }, 300);
   }
 });
@@ -674,7 +1153,6 @@ actionBtn.addEventListener('wheel', (e) => {
     rapidClickCount = 0;
   }
   
-  // Stop any ongoing long press
   stopLongPress();
   stopNumpadLongPress();
   
@@ -764,4 +1242,10 @@ creditName.addEventListener('click', () => {
       creditName.classList.remove('clicked');
     }, 300);
   });
+});
+
+// Initialize placeholder and note text on page load
+document.addEventListener('DOMContentLoaded', () => {
+  updatePlaceholder();
+  updateNoteText();
 });

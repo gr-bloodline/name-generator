@@ -141,6 +141,10 @@ function toggleNoSymbolMode() {
       updateResult();
     }
   }
+  
+  // Remove dual-mode-active class if it exists
+  const resultEl = document.getElementById('result');
+  resultEl.classList.remove('dual-mode-active');
 }
 
 // Toggle dual mode (only works when in no-symbol mode and generated)
@@ -148,6 +152,7 @@ function toggleDualMode() {
   if (!isGenerated || !noSymbolMode) return;
   
   dualMode = !dualMode;
+  const resultEl = document.getElementById('result');
   
   if (dualMode) {
     // Store current no-symbol version if not already stored
@@ -158,6 +163,8 @@ function toggleDualMode() {
     currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
     // Show both versions
     updateResultDual();
+    // Add dual-mode-active class for mobile styling
+    resultEl.classList.add('dual-mode-active');
     // Update note text for dual mode
     updateNoteTextForDualMode();
     // Softer haptic feedback for dual mode activation
@@ -165,6 +172,8 @@ function toggleDualMode() {
   } else {
     // Show only the no-symbol version
     updateResultNoSymbol();
+    // Remove the dual-mode-active class
+    resultEl.classList.remove('dual-mode-active');
     // Restore normal note text
     updateNoteText();
   }
@@ -517,6 +526,7 @@ function applySymbolAnimation(animationType) {
 function updateResult() {
   const resultEl = document.getElementById('result');
   resultEl.classList.add('visible');
+  resultEl.classList.remove('dual-mode-active'); // Ensure dual mode class is removed
   resultEl.innerHTML = '';
   
   const baseSpan = document.createElement('span');
@@ -539,6 +549,7 @@ function updateResult() {
 function updateResultNoSymbol() {
   const resultEl = document.getElementById('result');
   resultEl.classList.add('visible');
+  resultEl.classList.remove('dual-mode-active'); // Ensure dual mode class is removed
   resultEl.innerHTML = '';
   
   const baseSpan = document.createElement('span');
@@ -553,6 +564,7 @@ function updateResultNoSymbol() {
 function updateResultDual() {
   const resultEl = document.getElementById('result');
   resultEl.classList.add('visible');
+  resultEl.classList.add('dual-mode-active'); // Add this class for mobile styling
   resultEl.innerHTML = '';
   
   // First version: without symbol
@@ -617,6 +629,7 @@ function resetGenerator() {
   
   const resultEl = document.getElementById('result');
   resultEl.classList.remove('visible');
+  resultEl.classList.remove('dual-mode-active'); // Remove class here too
   resultEl.innerHTML = '';
   
   updateButtonAppearance();
@@ -942,6 +955,7 @@ document.getElementById('nameInput').addEventListener('input', (e) => {
     
     const resultEl = document.getElementById('result');
     resultEl.classList.remove('visible');
+    resultEl.classList.remove('dual-mode-active');
     resultEl.innerHTML = '';
     
     updateButtonAppearance();

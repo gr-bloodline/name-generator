@@ -677,9 +677,6 @@ function startLongPress() {
 function startNoSymbolLongPress(e) {
   if (isGenerated || noSymbolLongPressTimer) return;
   
-  // Prevent default context menu
-  e.preventDefault();
-  
   noSymbolLongPressTimer = setTimeout(() => {
     // Generate without symbol
     generateWithoutSymbol();
@@ -1020,13 +1017,12 @@ actionBtn.addEventListener('dblclick', (e) => {
   handleAction(e);
 });
 
-// MOBILE TOUCH HANDLING - Prevent context menu and handle long press
+// MOBILE TOUCH HANDLING - Prevent context menu only
 actionBtn.addEventListener('contextmenu', (e) => {
   e.preventDefault(); // Prevent browser context menu on long press
 });
 
 actionBtn.addEventListener('touchstart', (e) => {
-  e.preventDefault(); // Prevent default to avoid any browser hints
   isTouching = true;
   touchMoved = false;
   
@@ -1038,7 +1034,7 @@ actionBtn.addEventListener('touchstart', (e) => {
     // Already generated - long press for rapid scrolling
     startLongPress();
   }
-}, { passive: false });
+}, { passive: true });
 
 actionBtn.addEventListener('touchmove', (e) => {
   touchMoved = true;
@@ -1047,7 +1043,6 @@ actionBtn.addEventListener('touchmove', (e) => {
 });
 
 actionBtn.addEventListener('touchend', (e) => {
-  e.preventDefault();
   if (!touchMoved && !longPressActive && !noSymbolLongPressTimer) {
     // Simple tap - handle normal click
     handleAction({ type: 'click', detail: 1 });
@@ -1175,7 +1170,6 @@ inputField.addEventListener('beforeinput', (e) => {
     charCountEl.classList.add('limit-warning');
     // Haptic feedback for limit warning
     triggerHaptic([60]);
-    if (navigator.vibrate) navigator.vibrate(100);
     setTimeout(() => {
       charCountEl.classList.remove('limit-warning');
     }, 300);

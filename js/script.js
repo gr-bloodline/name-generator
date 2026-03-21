@@ -92,6 +92,14 @@ const TRIPLE_CLICK_DELAY = 300;
 // Shift key state
 let shiftPressed = false;
 
+// Haptic feedback function
+function triggerHaptic(pattern) {
+  // Only trigger on mobile devices that support vibration
+  if (navigator.vibrate && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    navigator.vibrate(pattern);
+  }
+}
+
 function toSmallCaps(input) {
   return input.toLowerCase().split('').map(c =>
     c === ' ' ? 'ㅤ' : smallCapsMap[c] || ''
@@ -103,6 +111,9 @@ function toggleNoSymbolMode() {
   noSymbolMode = !noSymbolMode;
   dualMode = false;
   maxChars = noSymbolMode ? 8 : 7;
+  
+  // Haptic feedback for mode toggle
+  triggerHaptic([20, 15]);
   
   // Update input maxlength
   const input = document.getElementById('nameInput');
@@ -149,6 +160,8 @@ function toggleDualMode() {
     updateResultDual();
     // Update note text for dual mode
     updateNoteTextForDualMode();
+    // Haptic feedback for dual mode activation
+    triggerHaptic([15, 12, 15]);
   } else {
     // Show only the no-symbol version
     updateResultNoSymbol();
@@ -250,6 +263,8 @@ function handleAction(event) {
     currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
     updateSymbolDisplay();
     applySymbolAnimation('double');
+    // Haptic feedback for double click
+    triggerHaptic([12, 20, 12]);
     return;
   }
 
@@ -273,6 +288,8 @@ function handleAction(event) {
         updateSymbolDisplay();
       }
       applySymbolAnimation('rapid');
+      // Haptic feedback for rapid clicks
+      triggerHaptic([8, 8, 8]);
     } else {
       // SINGLE CLICK
       handleSingleClick();
@@ -306,6 +323,8 @@ function handleSymbolCycle() {
   
   updateResultDual();
   applySymbolAnimation('single');
+  // Haptic feedback for single click in dual mode
+  triggerHaptic([12]);
 }
 
 function handleSingleClick() {
@@ -332,6 +351,8 @@ function handleSingleClick() {
   
   updateSymbolDisplay();
   applySymbolAnimation('single');
+  // Haptic feedback for single click
+  triggerHaptic([12]);
 }
 
 function generateName() {
@@ -339,6 +360,7 @@ function generateName() {
   const currentMax = noSymbolMode ? 8 : 7;
   
   if (input.length === 0 || input.length > currentMax) {
+    triggerHaptic([60]); // Softer warning buzz
     alert(`Please enter a name with 1–${currentMax} characters.`);
     return;
   }
@@ -368,6 +390,9 @@ function generateName() {
   if (currentSymbol) {
     recentSymbols.push(currentSymbol);
   }
+  
+  // Haptic feedback for generation
+  triggerHaptic([20]);
 }
 
 // Generate without symbol WITHOUT changing toggle mode (for Shift+Click and mobile long press)
@@ -376,6 +401,7 @@ function generateWithoutSymbol() {
   const currentMax = 8; // Always 8 for no-symbol generation
   
   if (input.length === 0 || input.length > currentMax) {
+    triggerHaptic([60]); // Softer warning buzz
     alert(`Please enter a name with 1–8 characters.`);
     return;
   }
@@ -400,6 +426,9 @@ function generateWithoutSymbol() {
   symbolIndex = 0;
   clickCount = 0;
   recentSymbols = [];
+  
+  // Haptic feedback for no-symbol generation
+  triggerHaptic([40, 20]);
 }
 
 // Remove symbol from current name (triple click)
@@ -414,6 +443,8 @@ function removeSymbolFromCurrent() {
     } else {
       updateResult();
     }
+    // Haptic feedback for triple click remove
+    triggerHaptic([30]);
   }
 }
 
@@ -437,6 +468,7 @@ function handleScroll(direction) {
     }
     applySymbolAnimation('scrollUp');
   }
+  // No haptic for scroll on mobile (scroll wheel only works on desktop)
 }
 
 function updateSymbolDisplay() {
@@ -557,6 +589,7 @@ function updateResultDual() {
 function resetGenerator() {
   stopLongPress();
   stopNumpadLongPress();
+  stopNoSymbolLongPress();
   
   isGenerated = false;
   dualMode = false;
@@ -610,6 +643,9 @@ function resetGenerator() {
 function startLongPress() {
   if (!isGenerated || longPressActive) return;
   
+  // Haptic feedback for long press start
+  triggerHaptic([50]);
+  
   longPressTimer = setTimeout(() => {
     longPressActive = true;
     longPressSpeed = 200;
@@ -637,23 +673,16 @@ function startLongPress() {
   }, LONG_PRESS_DELAY);
 }
 
-// Long press for no-symbol mode (2 seconds) - Mobile only WITHOUT changing toggle and NO MESSAGE
+// Long press for no-symbol mode (2 seconds) - Mobile only
 function startNoSymbolLongPress(e) {
   if (isGenerated || noSymbolLongPressTimer) return;
   
-  // Show progress indicator
-  const indicator = document.createElement('div');
-  indicator.className = 'long-press-progress';
-  indicator.innerHTML = '<div class="progress-circle"></div> Hold to generate without symbol...';
-  document.body.appendChild(indicator);
+  // Prevent default context menu
+  e.preventDefault();
   
   noSymbolLongPressTimer = setTimeout(() => {
-    // Generate without symbol but don't change toggle mode
+    // Generate without symbol
     generateWithoutSymbol();
-    
-    // Remove indicator
-    const existingIndicator = document.querySelector('.long-press-progress');
-    if (existingIndicator) existingIndicator.remove();
     noSymbolLongPressTimer = null;
   }, NO_SYMBOL_LONG_PRESS_DELAY);
 }
@@ -663,8 +692,6 @@ function stopNoSymbolLongPress() {
     clearTimeout(noSymbolLongPressTimer);
     noSymbolLongPressTimer = null;
   }
-  const indicator = document.querySelector('.long-press-progress');
-  if (indicator) indicator.remove();
 }
 
 function stopLongPress() {
@@ -681,6 +708,8 @@ function stopLongPress() {
   if (longPressActive) {
     longPressActive = false;
     document.getElementById('actionBtn').style.opacity = '1';
+    // Haptic feedback for long press stop
+    triggerHaptic([20]);
   }
 }
 
@@ -959,6 +988,8 @@ document.getElementById('result').addEventListener('click', (e) => {
   if (textToCopy) {
     navigator.clipboard.writeText(textToCopy).then(() => {
       showCopiedMessage();
+      // Haptic feedback for copy
+      triggerHaptic([15]);
     });
   }
   
@@ -989,8 +1020,13 @@ actionBtn.addEventListener('dblclick', (e) => {
   handleAction(e);
 });
 
-// MOBILE TOUCH HANDLING
+// MOBILE TOUCH HANDLING - Prevent context menu and handle long press
+actionBtn.addEventListener('contextmenu', (e) => {
+  e.preventDefault(); // Prevent browser context menu on long press
+});
+
 actionBtn.addEventListener('touchstart', (e) => {
+  e.preventDefault(); // Prevent default to avoid any browser hints
   isTouching = true;
   touchMoved = false;
   
@@ -1002,7 +1038,7 @@ actionBtn.addEventListener('touchstart', (e) => {
     // Already generated - long press for rapid scrolling
     startLongPress();
   }
-}, { passive: true });
+}, { passive: false });
 
 actionBtn.addEventListener('touchmove', (e) => {
   touchMoved = true;
@@ -1011,8 +1047,10 @@ actionBtn.addEventListener('touchmove', (e) => {
 });
 
 actionBtn.addEventListener('touchend', (e) => {
+  e.preventDefault();
   if (!touchMoved && !longPressActive && !noSymbolLongPressTimer) {
-    // Simple tap
+    // Simple tap - handle normal click
+    handleAction({ type: 'click', detail: 1 });
   }
   stopLongPress();
   stopNoSymbolLongPress();
@@ -1080,6 +1118,8 @@ function copyInvisible() {
   const invisible = 'ㅤ';
   navigator.clipboard.writeText(invisible).then(() => {
     showCopiedMessage();
+    // Haptic feedback for invisible copy
+    triggerHaptic([15]);
   });
 }
 
@@ -1133,6 +1173,8 @@ inputField.addEventListener('beforeinput', (e) => {
   
   if (value.length >= currentMax && e.inputType !== 'deleteContentBackward') {
     charCountEl.classList.add('limit-warning');
+    // Haptic feedback for limit warning
+    triggerHaptic([60]);
     if (navigator.vibrate) navigator.vibrate(100);
     setTimeout(() => {
       charCountEl.classList.remove('limit-warning');
@@ -1140,7 +1182,7 @@ inputField.addEventListener('beforeinput', (e) => {
   }
 });
 
-// Scroll wheel functionality
+// Scroll wheel functionality (desktop only)
 actionBtn.addEventListener('wheel', (e) => {
   e.preventDefault();
   

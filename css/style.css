@@ -172,15 +172,19 @@ h1 {
   align-items: center;
   height: 0;
   overflow: hidden;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
 #result.visible {
   opacity: 1;
-  height: 2.5rem;
+  height: auto;
+  min-height: 2.5rem;
 }
 
 #result .base-name, #result .symbol {
   user-select: none;
+  display: inline-block;
 }
 
 /* Animation effects for symbols */
@@ -334,6 +338,7 @@ h1 {
   display: none;
 }
 
+/* Mobile Styles */
 @media (max-width: 600px) {
   .container {
     margin: 1rem;
@@ -373,6 +378,39 @@ h1 {
   
   .action-button:active {
     transform: translateX(-0.05rem) scale(0.95);
+  }
+  
+  /* Compact dual mode display for mobile */
+  #result {
+    font-size: 1rem;
+    gap: 0.2rem;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  
+  #result.visible {
+    min-height: auto;
+  }
+  
+  /* Make dual mode names wrap and stack on mobile */
+  #result .base-name,
+  #result .symbol {
+    display: inline-block;
+    max-width: 100%;
+    word-break: break-all;
+  }
+  
+  /* Dual mode specific mobile styling */
+  #result .without-symbol-part,
+  #result .with-symbol-part {
+    font-size: 0.9rem;
+  }
+  
+  /* Ensure separator is visible but not taking too much space */
+  #result span:not(.base-name):not(.symbol) {
+    display: inline-block;
+    margin: 0 0.2rem;
+    font-size: 0.8rem;
   }
 }
 

@@ -17,6 +17,7 @@
 - **Long Press Feature** - Hold for rapid auto-scroll with acceleration
 - **Dual Mode** - Compare and copy both versions
 - **Alt+Enter Toggle** - Switch between modes instantly
+- **Haptic Feedback** - Gentle vibrations on mobile for better tactile response
 
 ## 🎮 How to Use
 
@@ -52,15 +53,14 @@
 
 ### Symbol Cycling Methods
 
-| Action | Result | Animation |
-|--------|--------|-----------|
-| **Single Click** (♻️) | Cycles through symbols normally | Smooth Rotate (8° spin) |
-| **Double Click** (♻️) | Gets random premium symbol | Gold Pulse |
-| **Scroll Up** (on ♻️) | Previous symbol | Slide Up |
-| **Scroll Down** (on ♻️) | Next symbol | Slide Down |
-| **Rapid Clicks** (3+ fast) | Moves multiple steps forward | Quick Pulse |
-| **Long Press (3 sec)** on Mobile (♻️) | Rapid auto-scroll with acceleration | Quick Pulse |
-| **Hold Numpad *** on Desktop | Rapid auto-scroll with acceleration | Quick Pulse |
+| Action | Result | Animation | Haptic (Mobile) |
+|--------|--------|-----------|-----------------|
+| **Single Click** (♻️) | Cycles through symbols normally | Smooth Rotate (8° spin) | Soft tap (12ms) |
+| **Double Click** (♻️) | Gets random premium symbol | Gold Pulse | Soft double pulse (12-20-12ms) |
+| **Scroll Up/Down** (on ♻️) | Previous/Next symbol | Slide Up/Down | None (desktop only) |
+| **Rapid Clicks** (3+ fast) | Moves multiple steps forward | Quick Pulse | Gentle rapid pulses (8-8-8ms) |
+| **Long Press (3 sec)** on Mobile (♻️) | Rapid auto-scroll with acceleration | Quick Pulse | Gentle buzz start (50ms) + soft release (20ms) |
+| **Hold Numpad *** on Desktop | Rapid auto-scroll with acceleration | Quick Pulse | None (desktop only) |
 
 ### ⌨️ Keyboard Shortcuts
 
@@ -90,43 +90,50 @@
 - **Speed Acceleration**: Scrolling gets faster the longer you hold (starts at 200ms, accelerates to 50ms)
 - **Dual Mode**: Compare both versions side by side with separate copy zones
 - **Triple Click**: Triple click on result to remove the symbol silently
+- **Haptic Feedback**: Gentle vibrations on mobile for every action (soft and subtle)
+
+### 📱 Mobile Gestures & Haptic Feedback
+
+| Gesture | Action | Haptic Feedback |
+|---------|--------|-----------------|
+| **Single tap on ✨** | Generate name | Soft tap (20ms) |
+| **Single tap on ♻️** | Cycle symbol | Subtle micro tap (12ms) |
+| **Double tap on ♻️** | Random premium symbol | Soft double pulse (12-20-12ms) |
+| **3+ rapid taps on ♻️** | Skip multiple symbols | Gentle rapid pulses (8-8-8ms) |
+| **Long press (3 sec) on ♻️** | Rapid auto-scroll | Gentle buzz start (50ms) + soft release (20ms) |
+| **Long press (2 sec) on ✨** | Generate without symbol | Soft then gentle (40-20ms) |
+| **Tap on result** | Copy name | Gentle confirmation (15ms) |
+| **Triple tap on result** | Remove symbol | Slightly stronger (30ms) |
+| **Tap on char counter** | Toggle mode | Soft two-stage (20-15ms) |
+| **Tap on 🎭** (dual mode) | Enter dual mode | Gentle three-stage (15-12-15ms) |
+| **Input limit warning** | Character limit reached | Softer warning (60ms) |
 
 ### 💎 Premium First Generation Symbols
 ❖ 〆 々 ⟡ ⟠ ⌭ ⌮ ⌰ ☃ ☂ ☁ ☼ ⁂ ヅ ミ ¤ ♡ ⚖ ៚ ⌫ ⌘
 
 ### 📋 Quick Reference
 
-| Button State | Action | Behavior |
-|--------------|--------|----------|
-| **✨** | First Click | Generates new name (with premium symbol in normal mode, without in no-symbol mode) |
-| **♻️** (Normal Mode) | Single Click | Next symbol (with lucky click every 5th) |
-| **♻️** (Normal Mode) | Double Click | Random premium symbol |
-| **♻️** (Normal Mode) | Scroll Up | Previous symbol |
-| **♻️** (Normal Mode) | Scroll Down | Next symbol |
-| **♻️** (Normal Mode) | 3+ Rapid Clicks | Skip multiple symbols forward |
-| **♻️** (Normal Mode) | Long Press (3 sec) | Rapid auto-scroll with acceleration |
-| **🎭** (No-Symbol Mode) | Click | Enter Dual Mode |
-| **♻️** (Dual Mode) | Click | Cycle only the symbol in right version |
-| **Numpad *** (hold) | Long Press | Rapid auto-scroll with acceleration |
+| Button State | Action | Behavior | Haptic (Mobile) |
+|--------------|--------|----------|-----------------|
+| **✨** | First Click | Generates new name (with premium symbol in normal mode, without in no-symbol mode) | Soft tap (20ms) |
+| **♻️** (Normal Mode) | Single Click | Next symbol (with lucky click every 5th) | Subtle tap (12ms) |
+| **♻️** (Normal Mode) | Double Click | Random premium symbol | Soft double pulse (12-20-12ms) |
+| **♻️** (Normal Mode) | 3+ Rapid Clicks | Skip multiple symbols forward | Gentle rapid pulses (8-8-8ms) |
+| **♻️** (Normal Mode) | Long Press (3 sec) | Rapid auto-scroll with acceleration | Gentle buzz start (50ms) + release (20ms) |
+| **🎭** (No-Symbol Mode) | Click | Enter Dual Mode | Gentle three-stage (15-12-15ms) |
+| **♻️** (Dual Mode) | Click | Cycle only the symbol in right version | Subtle tap (12ms) |
+| **Result** | Click | Copy based on mode/position | Gentle confirmation (15ms) |
+| **Result** | Triple Click | Remove symbol silently | Slightly stronger (30ms) |
 
 ### 🖱️ Click-to-Copy Behavior
 
-| Mode | Click Location | Copies |
-|------|----------------|--------|
-| **Normal Mode** | Anywhere | Name + Symbol |
-| **No-Symbol Mode** | Anywhere | Name only |
-| **Dual Mode** | Left side (before "·") | Name without symbol |
-| **Dual Mode** | Right side (after "·") | Name with current symbol |
-| **Triple Click** | Anywhere (any mode) | Removes symbol silently |
-
-### 📱 Mobile Gestures
-
-| Gesture | Action |
-|---------|--------|
-| **Triple tap on input** | Toggle normal/no-symbol mode |
-| **Hold spacebar on keyboard** | Toggle normal/no-symbol mode (0.5 sec) |
-| **Long press (3 sec) on ♻️ button** | Rapid auto-scroll with acceleration |
-| **Long press (2 sec) on ✨ button** | Generate without symbol |
+| Mode | Click Location | Copies | Haptic |
+|------|----------------|--------|--------|
+| **Normal Mode** | Anywhere | Name + Symbol | Gentle confirmation (15ms) |
+| **No-Symbol Mode** | Anywhere | Name only | Gentle confirmation (15ms) |
+| **Dual Mode** | Left side (before "·") | Name without symbol | Gentle confirmation (15ms) |
+| **Dual Mode** | Right side (after "·") | Name with current symbol | Gentle confirmation (15ms) |
+| **Triple Click** | Anywhere (any mode) | Removes symbol silently | Slightly stronger (30ms) |
 
 ## 🚨 Important Notes
 1. **ALWAYS** Follow the style guide before changing a name.
@@ -136,6 +143,7 @@
    - Dual mode: Shows both versions (no character limit in display)
 3. Use only for official guild purposes
 4. Respect the naming guidelines - no inappropriate content
+5. **Haptic feedback only works on mobile devices** with vibration support
 
 ## 💻 For Members
 1. Enter your name (1-7 letters in normal mode, 1-8 in no-symbol mode)

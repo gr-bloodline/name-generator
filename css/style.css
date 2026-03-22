@@ -185,6 +185,14 @@ h1 {
 #result .base-name, #result .symbol {
   user-select: none;
   display: inline-block;
+  text-decoration: none;
+}
+
+/* Remove any possible underlines or borders */
+#result span {
+  text-decoration: none;
+  border: none;
+  outline: none;
 }
 
 /* Animation effects for symbols */
@@ -382,33 +390,49 @@ h1 {
   
   /* Normal mode and no-symbol mode - keep original size */
   #result {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
   }
   
   /* ONLY when dual mode is active on mobile */
   #result.dual-mode-active {
-    font-size: 1rem;
-    gap: 0.2rem;
-    line-height: 1.4;
+    font-size: 1.4rem;
+    gap: 0.3rem;
+    line-height: 1.5;
     word-break: break-word;
+    flex-wrap: wrap;
   }
   
   #result.dual-mode-active .base-name,
   #result.dual-mode-active .symbol {
     display: inline-block;
-    max-width: 100%;
-    word-break: break-all;
+    text-decoration: none;
+    border: none;
+    outline: none;
   }
   
   #result.dual-mode-active .without-symbol-part,
   #result.dual-mode-active .with-symbol-part {
-    font-size: 0.9rem;
+    font-size: 1.4rem;
+    display: inline-block;
   }
   
+  /* Separator styling - make it stand alone */
   #result.dual-mode-active span:not(.base-name):not(.symbol) {
     display: inline-block;
-    margin: 0 0.2rem;
-    font-size: 0.8rem;
+    margin: 0 0.3rem;
+    font-size: 1.2rem;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  
+  /* Ensure no underlines or connections */
+  #result.dual-mode-active .base-name,
+  #result.dual-mode-active .without-symbol-part,
+  #result.dual-mode-active .with-symbol-part,
+  #result.dual-mode-active .symbol {
+    text-decoration: none !important;
+    border-bottom: none !important;
+    outline: none !important;
   }
 }
 

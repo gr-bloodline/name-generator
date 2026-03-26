@@ -179,10 +179,13 @@ function updateButtonAppearance() {
   const actionBtn = document.getElementById('actionBtn');
   if (!isGenerated) {
     actionBtn.innerText = '✨';
+    actionBtn.classList.remove('mode-switch-btn');
   } else if (noSymbolMode && isGenerated) {
     actionBtn.innerText = '0/7';
+    actionBtn.classList.add('mode-switch-btn');
   } else {
     actionBtn.innerText = '♻️';
+    actionBtn.classList.remove('mode-switch-btn');
   }
 }
 

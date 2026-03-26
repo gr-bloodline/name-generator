@@ -43,11 +43,6 @@ let recentSymbols = [];
 let noSymbolMode = false;
 let maxChars = 7; // Default with symbol
 
-// Dual mode variables
-let dualMode = false;
-let currentSymbolNoSymbol = ''; // Empty always
-let baseNameNoSymbol = '';
-
 // Rapid click detection variables
 let clickTimer = null;
 let rapidClickCount = 0;
@@ -106,10 +101,46 @@ function toSmallCaps(input) {
   ).join('');
 }
 
-// Toggle between symbol and no-symbol mode
+// Switch from no-symbol mode to normal mode
+function switchToNormalMode() {
+  if (!isGenerated || !noSymbolMode) return;
+  
+  const input = document.getElementById('nameInput');
+  const currentName = input.value.trim();
+  
+  if (currentName.length === 0 || currentName.length > 7) {
+    alert(`Please enter a name with 1–7 characters to switch to normal mode.`);
+    return;
+  }
+  
+  // Switch to normal mode
+  noSymbolMode = false;
+  maxChars = 7;
+  
+  // Update input
+  input.maxLength = maxChars;
+  updatePlaceholder();
+  updateCharCount();
+  updateNoteText();
+  
+  // Regenerate with symbol
+  baseName = `ᴳᴿᴮメ${toSmallCaps(currentName)}`;
+  currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
+  updateResult();
+  updateButtonAppearance();
+  
+  // Reset symbol index
+  symbolIndex = 0;
+  clickCount = 0;
+  recentSymbols = [currentSymbol];
+  
+  // Haptic feedback
+  triggerHaptic([15]);
+}
+
+// Toggle between symbol and no-symbol mode (for empty input or manual toggle)
 function toggleNoSymbolMode() {
   noSymbolMode = !noSymbolMode;
-  dualMode = false;
   maxChars = noSymbolMode ? 8 : 7;
   
   // Softer haptic feedback for mode toggle
@@ -133,58 +164,14 @@ function toggleNoSymbolMode() {
   
   // If generated, update display
   if (isGenerated) {
-    if (noSymbolMode && !dualMode) {
+    if (noSymbolMode) {
       // Show no-symbol version
       updateResultNoSymbol();
-    } else if (!noSymbolMode && !dualMode) {
+    } else {
       // Show normal version
       updateResult();
     }
   }
-  
-  // Remove dual-mode-active class if it exists
-  const resultEl = document.getElementById('result');
-  resultEl.classList.remove('dual-mode-active');
-}
-
-// Toggle dual mode (only works when in no-symbol mode and generated)
-function toggleDualMode() {
-  if (!isGenerated || !noSymbolMode) return;
-  
-  dualMode = !dualMode;
-  const resultEl = document.getElementById('result');
-  
-  if (dualMode) {
-    // Store current no-symbol version if not already stored
-    if (!baseNameNoSymbol) {
-      baseNameNoSymbol = baseName;
-    }
-    // Generate a random premium symbol for the right result
-    currentSymbol = firstGenSymbols[Math.floor(Math.random() * firstGenSymbols.length)];
-    // Show both versions
-    updateResultDual();
-    // Add dual-mode-active class for mobile styling
-    resultEl.classList.add('dual-mode-active');
-    // Update note text for dual mode
-    updateNoteTextForDualMode();
-    // Softer haptic feedback for dual mode activation
-    triggerHaptic([12, 10, 12]);
-  } else {
-    // Show only the no-symbol version
-    updateResultNoSymbol();
-    // Remove the dual-mode-active class
-    resultEl.classList.remove('dual-mode-active');
-    // Restore normal note text
-    updateNoteText();
-  }
-  
-  updateButtonAppearance();
-}
-
-// Update note text specifically for dual mode
-function updateNoteTextForDualMode() {
-  const noteEl = document.querySelector('.note');
-  noteEl.textContent = 'Dual mode active - Click left side to copy without symbol, right side to copy with symbol';
 }
 
 // Update button appearance based on current mode
@@ -192,10 +179,8 @@ function updateButtonAppearance() {
   const actionBtn = document.getElementById('actionBtn');
   if (!isGenerated) {
     actionBtn.innerText = '✨';
-  } else if (dualMode) {
-    actionBtn.innerText = '♻️';
   } else if (noSymbolMode && isGenerated) {
-    actionBtn.innerText = '🎭';
+    actionBtn.innerText = '0/7';
   } else {
     actionBtn.innerText = '♻️';
   }
@@ -244,6 +229,12 @@ function handleAction(event) {
     return;
   }
   
+  // Check if in no-symbol mode and generated - switch to normal mode
+  if (noSymbolMode && isGenerated) {
+    switchToNormalMode();
+    return;
+  }
+  
   // Check for Shift+Click (PC - no symbol mode generation WITHOUT toggling mode)
   if (shiftPressed && !isGenerated) {
     generateWithoutSymbol();
@@ -252,18 +243,6 @@ function handleAction(event) {
   
   if (!isGenerated) {
     generateName();
-    return;
-  }
-
-  // In dual mode, cycle only the "with symbol" version
-  if (dualMode) {
-    handleSymbolCycle();
-    return;
-  }
-  
-  // In no-symbol mode with generation, toggle dual mode
-  if (noSymbolMode && isGenerated) {
-    toggleDualMode();
     return;
   }
 
@@ -291,11 +270,7 @@ function handleAction(event) {
         symbolIndex = (symbolIndex + 1) % symbols.length;
       }
       currentSymbol = symbols[symbolIndex];
-      if (dualMode) {
-        updateResultDual();
-      } else {
-        updateSymbolDisplay();
-      }
+      updateSymbolDisplay();
       applySymbolAnimation('rapid');
       // Softer haptic for rapid clicks
       triggerHaptic([6, 6, 6]);
@@ -306,34 +281,6 @@ function handleAction(event) {
     
     rapidClickCount = 0;
   }, RAPID_CLICK_DELAY);
-}
-
-function handleSymbolCycle() {
-  clickCount++;
-  
-  // 🎲 LUCKY CLICK: Every 5th click
-  if (clickCount % 5 === 0) {
-    currentSymbol = symbols[Math.floor(Math.random() * symbols.length)];
-  }
-  // Recent random: After 10 clicks, every 10th click
-  else if (clickCount > 10 && clickCount % 10 === 1 && recentSymbols.length >= 10) {
-    currentSymbol = recentSymbols[Math.floor(Math.random() * recentSymbols.length)];
-  } else {
-    // Normal sequential
-    currentSymbol = symbols[symbolIndex];
-    symbolIndex = (symbolIndex + 1) % symbols.length;
-  }
-  
-  // Track recent symbols
-  if (recentSymbols.length >= 10) {
-    recentSymbols.shift();
-  }
-  recentSymbols.push(currentSymbol);
-  
-  updateResultDual();
-  applySymbolAnimation('single');
-  // Softer haptic for single click
-  triggerHaptic([8]);
 }
 
 function handleSingleClick() {
@@ -379,7 +326,6 @@ function generateName() {
   if (noSymbolMode) {
     // In no-symbol mode, generate without symbol
     currentSymbol = '';
-    baseNameNoSymbol = baseName;
     updateResultNoSymbol();
   } else {
     // In normal mode, generate with symbol
@@ -424,6 +370,13 @@ function generateWithoutSymbol() {
   // Generate without symbol but don't change the noSymbolMode variable
   baseName = `ᴳᴿᴮメ${toSmallCaps(input)}`;
   currentSymbol = '';
+  noSymbolMode = true;
+  maxChars = 8;
+  const inputElement = document.getElementById('nameInput');
+  inputElement.maxLength = maxChars;
+  updatePlaceholder();
+  updateNoteText();
+  updateCharCount();
   
   updateResultNoSymbol();
   isGenerated = true;
@@ -447,13 +400,7 @@ function removeSymbolFromCurrent() {
   // Temporarily remove symbol without changing mode
   if (currentSymbol) {
     currentSymbol = '';
-    if (dualMode) {
-      updateResultDual();
-    } else {
-      updateResult();
-    }
-    // Softer haptic for triple click remove
-    triggerHaptic([20]);
+    updateResult();
   }
 }
 
@@ -461,20 +408,12 @@ function handleScroll(direction) {
   if (direction === 'down' || direction === 'right') {
     symbolIndex = (symbolIndex + 1) % symbols.length;
     currentSymbol = symbols[symbolIndex];
-    if (dualMode) {
-      updateResultDual();
-    } else {
-      updateSymbolDisplay();
-    }
+    updateSymbolDisplay();
     applySymbolAnimation('scrollDown');
   } else if (direction === 'up' || direction === 'left') {
     symbolIndex = (symbolIndex - 1 + symbols.length) % symbols.length;
     currentSymbol = symbols[symbolIndex];
-    if (dualMode) {
-      updateResultDual();
-    } else {
-      updateSymbolDisplay();
-    }
+    updateSymbolDisplay();
     applySymbolAnimation('scrollUp');
   }
 }
@@ -526,7 +465,6 @@ function applySymbolAnimation(animationType) {
 function updateResult() {
   const resultEl = document.getElementById('result');
   resultEl.classList.add('visible');
-  resultEl.classList.remove('dual-mode-active'); // Ensure dual mode class is removed
   resultEl.innerHTML = '';
   
   const baseSpan = document.createElement('span');
@@ -549,7 +487,6 @@ function updateResult() {
 function updateResultNoSymbol() {
   const resultEl = document.getElementById('result');
   resultEl.classList.add('visible');
-  resultEl.classList.remove('dual-mode-active'); // Ensure dual mode class is removed
   resultEl.innerHTML = '';
   
   const baseSpan = document.createElement('span');
@@ -561,52 +498,14 @@ function updateResultNoSymbol() {
   resultEl.setAttribute('data-copy-text', baseName);
 }
 
-function updateResultDual() {
-  const resultEl = document.getElementById('result');
-  resultEl.classList.add('visible');
-  resultEl.classList.add('dual-mode-active'); // Add this class for mobile styling
-  resultEl.innerHTML = '';
-  
-  // First version: without symbol
-  const withoutSymbolSpan = document.createElement('span');
-  withoutSymbolSpan.className = 'base-name without-symbol-part';
-  withoutSymbolSpan.textContent = baseNameNoSymbol || baseName;
-  resultEl.appendChild(withoutSymbolSpan);
-  
-  // Add separator
-  const separator = document.createElement('span');
-  separator.textContent = ' · ';
-  separator.style.margin = '0 0.5rem';
-  separator.style.opacity = '0.5';
-  separator.style.pointerEvents = 'none';
-  resultEl.appendChild(separator);
-  
-  // Second version: with symbol
-  const withSymbolSpan = document.createElement('span');
-  withSymbolSpan.className = 'base-name with-symbol-part';
-  withSymbolSpan.textContent = (baseNameNoSymbol || baseName);
-  resultEl.appendChild(withSymbolSpan);
-  
-  const symbolSpan = document.createElement('span');
-  symbolSpan.className = 'symbol';
-  symbolSpan.textContent = currentSymbol;
-  resultEl.appendChild(symbolSpan);
-  
-  // Store both versions separately
-  resultEl.setAttribute('data-without-symbol', baseNameNoSymbol || baseName);
-  resultEl.setAttribute('data-with-symbol', (baseNameNoSymbol || baseName) + currentSymbol);
-}
-
 function resetGenerator() {
   stopLongPress();
   stopNumpadLongPress();
   stopNoSymbolLongPress();
   
   isGenerated = false;
-  dualMode = false;
   currentSymbol = '';
   baseName = '';
-  baseNameNoSymbol = '';
   symbolIndex = 0;
   clickCount = 0;
   recentSymbols = [];
@@ -629,7 +528,6 @@ function resetGenerator() {
   
   const resultEl = document.getElementById('result');
   resultEl.classList.remove('visible');
-  resultEl.classList.remove('dual-mode-active'); // Remove class here too
   resultEl.innerHTML = '';
   
   updateButtonAppearance();
@@ -665,11 +563,7 @@ function startLongPress() {
     const advanceSymbol = () => {
       symbolIndex = (symbolIndex + 1) % symbols.length;
       currentSymbol = symbols[symbolIndex];
-      if (dualMode) {
-        updateResultDual();
-      } else {
-        updateSymbolDisplay();
-      }
+      updateSymbolDisplay();
       applySymbolAnimation('longpress');
     };
     
@@ -732,11 +626,7 @@ function startNumpadLongPress() {
   const advanceSymbol = () => {
     symbolIndex = (symbolIndex + 1) % symbols.length;
     currentSymbol = symbols[symbolIndex];
-    if (dualMode) {
-      updateResultDual();
-    } else {
-      updateSymbolDisplay();
-    }
+    updateSymbolDisplay();
     applySymbolAnimation('longpress');
   };
   
@@ -812,16 +702,13 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // 5. Ctrl + C → Copy (handles dual mode separately)
+  // 5. Ctrl + C → Copy
   if (ctrlCmdPressed && e.key === 'c') {
     const resultEl = document.getElementById('result');
     if (isGenerated && resultEl.classList.contains('visible')) {
       e.preventDefault();
       let textToCopy = '';
-      if (dualMode) {
-        // In dual mode, default to copying the with-symbol version
-        textToCopy = resultEl.getAttribute('data-with-symbol') || (baseNameNoSymbol || baseName) + currentSymbol;
-      } else if (noSymbolMode && !dualMode) {
+      if (noSymbolMode) {
         textToCopy = baseName;
       } else {
         textToCopy = baseName + (currentSymbol || '');
@@ -836,7 +723,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   // 6. Number keys 1-9
-  if (isGenerated && !dualMode && !noSymbolMode && e.key >= '1' && e.key <= '9') {
+  if (isGenerated && !noSymbolMode && e.key >= '1' && e.key <= '9') {
     e.preventDefault();
     const num = parseInt(e.key);
     
@@ -882,20 +769,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   // 7. Arrow Keys
-  if (isGenerated && !dualMode) {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      handleScroll('down');
-      return;
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault();
-      handleScroll('up');
-      return;
-    }
-  }
-  
-  // Arrow keys also work in dual mode to cycle symbol
-  if (isGenerated && dualMode) {
+  if (isGenerated && !noSymbolMode) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
       e.preventDefault();
       handleScroll('down');
@@ -945,17 +819,14 @@ document.getElementById('nameInput').addEventListener('input', (e) => {
     resetGenerator();
   } else if (isGenerated && input.value.length > 0) {
     isGenerated = false;
-    dualMode = false;
     currentSymbol = '';
     baseName = '';
-    baseNameNoSymbol = '';
     symbolIndex = 0;
     clickCount = 0;
     recentSymbols = [];
     
     const resultEl = document.getElementById('result');
     resultEl.classList.remove('visible');
-    resultEl.classList.remove('dual-mode-active');
     resultEl.innerHTML = '';
     
     updateButtonAppearance();
@@ -975,20 +846,7 @@ document.getElementById('result').addEventListener('click', (e) => {
   const resultEl = document.getElementById('result');
   let textToCopy = '';
   
-  if (dualMode) {
-    // Check which part was clicked
-    const target = e.target;
-    const clickX = e.clientX - resultEl.getBoundingClientRect().left;
-    const totalWidth = resultEl.clientWidth;
-    
-    // If clicked on left side (before separator) or on the without-symbol-part
-    if (clickX < totalWidth / 2 || target.classList.contains('without-symbol-part')) {
-      textToCopy = resultEl.getAttribute('data-without-symbol') || baseNameNoSymbol || baseName;
-    } else {
-      // Right side or with-symbol-part
-      textToCopy = resultEl.getAttribute('data-with-symbol') || (baseNameNoSymbol || baseName) + currentSymbol;
-    }
-  } else if (noSymbolMode && !dualMode) {
+  if (noSymbolMode) {
     textToCopy = baseName;
   } else {
     textToCopy = baseName + (currentSymbol || '');
@@ -1013,7 +871,7 @@ document.getElementById('result').addEventListener('click', (e) => {
   }, TRIPLE_CLICK_DELAY);
 });
 
-// Tap on character counter to toggle mode - FIXED
+// Tap on character counter to toggle mode
 document.getElementById('charCount').addEventListener('click', (e) => {
   e.stopPropagation();
   toggleNoSymbolMode();
